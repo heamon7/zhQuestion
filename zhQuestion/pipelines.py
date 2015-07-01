@@ -104,7 +104,7 @@ class QuesRootPipeline(object):
 
                 #解除锁
                 self.redis0.hdel('questionLock',str(item['questionId']))
-            DropItem()
+            return item
         else:
             return item
 
@@ -191,7 +191,7 @@ class QuesInfoPipeline(object):
                         logging.warning('Error with put questionId into redis: '+str(e)+'tried again and failed')
 
 
-            DropItem()
+            return item
 
         else:
             return item
@@ -247,7 +247,7 @@ class QuesCommentPipeline(object):
                         logging.warning('tried again and successfully put data into redis ......')
                     except Exception,e:
                         logging.warning('Error with put questionId into redis: '+str(e)+'tried again and failed')
-            DropItem()
+            return item
         else:
             return item
 
@@ -286,7 +286,7 @@ class QuesFollowerPipeline(object):
 
             DropItem()
         else:
-            return item
+            DropItem()
 
                 # #如果成功赋值，返回1，说明该用户当前没有上锁，可更新
                 # if  self.redis3.hsetnx('userLock','userDataId',1):
