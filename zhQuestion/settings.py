@@ -48,7 +48,7 @@ SPIDER_MIDDDLEWARES = {
     'scrapy.contrib.spidermiddleware.httperror.HttpErrorMiddleware':300,
 }
 
-DUPEFILTER_CLASS = 'zhQuesFollower.custom_filters.SeenURLFilter'
+DUPEFILTER_CLASS = 'zhQuestion.custom_filters.SeenURLFilter'
 
 
 

@@ -17,9 +17,7 @@ import happybase
 class QuesfrontSpider(scrapy.Spider):
     name = "quesRoot"
     allowed_domains = ["zhihu.com"]
-    start_urls = (
-        'http://www.zhihu.com/topic/19776749/questions'
-    )
+    start_urls = ["http://www.zhihu.com/topic/19776749/questions"]
     handle_httpstatus_list = [401,429,500,502,504]
     baseUrl = 'http://www.zhihu.com/topic/19776749/questions?page=%s'
 
@@ -35,6 +33,7 @@ class QuesfrontSpider(scrapy.Spider):
     def parse(self, response):
 
         totalLength = int(response.xpath('//div[@class="border-pager"]//span[last()-1]/a/text()').extract()[0])
+        logging.warning('Total page number is %s',str(totalLength))
         self.requestPageList = range(1,totalLength+1)
         if self.spider_type=='Master':
             logging.warning('Master spider_type is '+self.spider_type)
