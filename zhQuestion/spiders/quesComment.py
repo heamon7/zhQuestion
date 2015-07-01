@@ -10,7 +10,7 @@ import logging
 import redis
 import requests
 
-from zhQuesComment.items import ZhquescommentItem
+from zhQuesComment.items import QuesCommentItem
 from zhQuesComment import settings
 
 import happybase
@@ -123,7 +123,7 @@ class QuescommentSpider(scrapy.Spider):
         if response.status != 200:
             yield Request(response.url,meta={'questionId':response.meta['questionId']},callback=self.parsePage)
         else:
-            item = ZhquescommentItem()
+            item = QuesCommentItem()
             item['spiderName'] = self.name
             sels=response.xpath('//div[@class="zm-item-comment"]')
             if len(sels):

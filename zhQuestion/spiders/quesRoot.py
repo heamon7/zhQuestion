@@ -91,12 +91,12 @@ class QuesfrontSpider(scrapy.Spider):
                 item['questionTimestamp'] = sel.xpath('h2[@class="question-item-title"]/span[@class="time"]/@data-timestamp').extract()[0]
                 item['questionId'] = sel.xpath('h2[@class="question-item-title"]/a[@class="question_link"]/@href').re(r'/question/(\d*)')[0]
                 try:
-                    item['subTopicName'] = sel.xpath('div[@class="subtopic"]/a/text()').extract()[0]
+                    # item['subTopicName'] = sel.xpath('div[@class="subtopic"]/a/text()').extract()[0]
                     item['subTopicId'] = sel.xpath('div[@class="subtopic"]/a/@href').re(r'/topic/(\d*)')[0]
 
                 except IndexError,e:
-                    item['subTopicName'] = ''
-                    item['subTopicId'] = 0
+                    # item['subTopicName'] = ''
+                    item['subTopicId'] = ''
 
                 yield item
 

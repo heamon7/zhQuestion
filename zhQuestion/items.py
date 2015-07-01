@@ -7,23 +7,24 @@
 
 import scrapy
 
-
 class QuesRootItem(scrapy.Item):
     # define the fields for your item here like:
     # name = scrapy.Field()
 
     # quesRoot
+    spiderName = scrapy.Field()
+    subTopicId = scrapy.Field()
+    questionTimestamp = scrapy.Field()
+    questionId = scrapy.Field()
 
     answerCount = scrapy.Field()
     isTopQuestion = scrapy.Field()
     subTopicName = scrapy.Field()
-    subTopicId = scrapy.Field()
-    questionTimestamp = scrapy.Field()
-    questionId = scrapy.Field()
     questionName = scrapy.Field()
 
 
 class QuesInfoItem(scrapy.Item):
+    spiderName = scrapy.Field()
     questionId = scrapy.Field()
     idZnonceContent =  scrapy.Field()   #   //*[@id="znonce"]
 
@@ -102,7 +103,25 @@ class QuesInfoItem(scrapy.Item):
 
 
 
+
+
+class QuesCommentItem(scrapy.Item):
+    # quesComment
+    spiderName = scrapy.Field()
+    questionId = scrapy.Field()
+    commentDataId = scrapy.Field()
+    userName = scrapy.Field()
+    userLinkId = scrapy.Field()
+    userImgLink = scrapy.Field()
+    commentContent = scrapy.Field()
+    commentDate = scrapy.Field()
+    commentUpCount = scrapy.Field()
+
+    pass
+
 class QuesFollowerItem(scrapy.Item):
+    spiderName = scrapy.Field()
+
     offset = scrapy.Field()
     questionId = scrapy.Field()
     userDataId = scrapy.Field()
@@ -117,19 +136,7 @@ class QuesFollowerItem(scrapy.Item):
     pass
 
 
-class QuesCommentItem(scrapy.Item):
-    # quesComment
 
-    questionId = scrapy.Field()
-    commentDataId = scrapy.Field()
-    userName = scrapy.Field()
-    userLinkId = scrapy.Field()
-    userImgLink = scrapy.Field()
-    commentContent = scrapy.Field()
-    commentDate = scrapy.Field()
-    commentUpCount = scrapy.Field()
-
-    pass
 
 
 
