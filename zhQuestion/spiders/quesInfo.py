@@ -27,7 +27,7 @@ class QuesinfoerSpider(scrapy.Spider):
     )
     handle_httpstatus_list = [401,429,500,502,504]
     baseUrl = "http://www.zhihu.com/question/"
-    handle_httpstatus_list = [429,502,504]
+
     quesIndex =0
 
 
@@ -44,7 +44,7 @@ class QuesinfoerSpider(scrapy.Spider):
 
     def start_requests(self):
 
-        self.questionIdList = self.redis0.hvals('questionIndex')
+        self.questionIdList = self.redis0.hkeys('questionIdIndex')
         totalLength = len(self.questionIdList)
 
         if self.spider_type=='Master':
@@ -113,7 +113,7 @@ class QuesinfoerSpider(scrapy.Spider):
             yield  self.make_requests_from_url(response.url)
 
         else:
-            item =  ZhquesinfoItem()
+            item =  QuesInfoItem()
             item['spiderName'] = self.name
 
             item['questionId'] = re.split('http://www.zhihu.com/question/(\d*)',response.url)[1]

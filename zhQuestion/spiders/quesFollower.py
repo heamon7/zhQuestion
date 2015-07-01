@@ -173,7 +173,7 @@ class QuesfollowerSpider(scrapy.Spider):
                                       ,callback=self.parsePage
                                       )
         else:
-            item =  ZhquesfollowerItem()
+            item =  QuesFollowerItem()
             data = json.loads(response.body)
             userCountRet = data['msg'][0]
 
