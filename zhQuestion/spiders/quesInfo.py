@@ -9,9 +9,9 @@ from scrapy.shell import inspect_response
 
 
 from datetime import datetime
-from zhQuesInfo import settings
+from zhQuestion import settings
 
-from zhQuesInfo.items import ZhquesinfoItem
+from zhQuestion.items import QuesInfoItem
 
 import re
 import redis

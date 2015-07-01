@@ -10,8 +10,8 @@ import logging
 import redis
 import requests
 
-from zhQuesComment.items import QuesCommentItem
-from zhQuesComment import settings
+from zhQuestion.items import QuesCommentItem
+from zhQuestion import settings
 
 import happybase
 

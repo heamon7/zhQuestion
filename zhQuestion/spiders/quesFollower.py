@@ -8,9 +8,9 @@ from scrapy.selector import Selector
 from scrapy.shell import inspect_response
 
 from datetime import datetime
-from zhQuesFollower import settings
+from zhQuestion import settings
 
-from zhQuesFollower.items import ZhquesfollowerItem
+from zhQuestion.items import QuesFollowerItem
 
 import re
 
