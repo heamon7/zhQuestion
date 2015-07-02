@@ -142,6 +142,7 @@ class QuesInfoPipeline(object):
                          ,str(item['questionFollowerCount'])
 
                          ,str(item['questionAnswerCount'])
+                         # 其实commentCount也可以去掉
                          ,str(item['quesCommentCount'])
                          # ,str(item['questionShowTimes'])
 
@@ -225,7 +226,8 @@ class QuesCommentPipeline(object):
                 commentDict={'comment:srcId':str(questionId),
                                 'comment:DataId':str(item['commentDataId']),
                                'comment:content':str(item['commentContent'].encode('utf-8')),
-                               'comment:date': str(item['commentDate']),
+                                #日期可能含有中文
+                               'comment:date': str(item['commentDate'].encode('utf-8')),
                                'comment:upCount': str(item['commentUpCount']),
                                'comment:userName': item['userName'].encode('utf-8'),
                                'comment:userLinkId': item['userLinkId'].encode('utf-8'),

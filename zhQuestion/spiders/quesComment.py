@@ -27,8 +27,13 @@ class QuescommentSpider(scrapy.Spider):
     questionIdList=[]
     questionDataResourceIdList=[]
 
+    quesIndex =0
+    reqLimit =20
+    pipelineLimit = 100000
+    threhold = 100
+
     def __init__(self,spider_type='Master',spider_number=0,partition=1,**kwargs):
-        self.redis2 = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, password=settings.REDIS_USER+':'+settings.REDIS_PASSWORD,db=2)
+        self.redis2 = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, password=settings.REDIS_PASSWORD,db=2)
 
         self.spider_type = str(spider_type)
         self.spider_number = int(spider_number)
@@ -45,10 +50,10 @@ class QuescommentSpider(scrapy.Spider):
             if self.partition!=1:
                 logging.warning('Master partition is '+str(self.partition))
                 self.questionIdList = self.questionIdList[self.spider_number*totalLength/self.partition:(self.spider_number+1)*totalLength/self.partition]
-
+                totalLength = len(self.questionIdList)
                 for index ,questionId in enumerate(self.questionIdList):
                     p2.lindex(str(questionId),-1)
-                    if index%self.pipelineLimit ==0:
+                    if (index+1)%self.pipelineLimit == 0:
                         self.questionDataResourceIdList.extend(p2.execute())
                     elif totalLength-index==1:
                         self.questionDataResourceIdList.extend(p2.execute())
@@ -69,7 +74,7 @@ class QuescommentSpider(scrapy.Spider):
                 logging.warning('Master  partition is '+str(self.partition))
                 for index ,questionId in enumerate(self.questionIdList):
                     p2.lindex(str(questionId),-1)
-                    if index%self.pipelineLimit ==0:
+                    if (index+1)%self.pipelineLimit == 0:
                         self.questionDataResourceIdList.extend(p2.execute())
                     elif totalLength-index==1:
                         self.questionDataResourceIdList.extend(p2.execute())
@@ -79,10 +84,10 @@ class QuescommentSpider(scrapy.Spider):
             logging.warning('Slave number is '+str(self.spider_number) + ' partition is '+str(self.partition))
             if (self.partition-self.spider_number)!=1:
                 self.questionIdList = self.questionIdList[self.spider_number*totalLength/self.partition:(self.spider_number+1)*totalLength/self.partition]
-
+                totalLength = len(self.questionIdList)
                 for index ,questionId in enumerate(self.questionIdList):
                     p2.lindex(str(questionId),-1)
-                    if index%self.pipelineLimit ==0:
+                    if (index+1)%self.pipelineLimit == 0:
                         self.questionDataResourceIdList.extend(p2.execute())
                     elif totalLength-index==1:
                         self.questionDataResourceIdList.extend(p2.execute())
@@ -90,9 +95,10 @@ class QuescommentSpider(scrapy.Spider):
 
             else:
                 self.questionIdList = self.questionIdList[self.spider_number*totalLength/self.partition:]
+                totalLength = len(self.questionIdList)
                 for index ,questionId in enumerate(self.questionIdList):
                     p2.lindex(str(questionId),-1)
-                    if index%self.pipelineLimit ==0:
+                    if (index+1)%self.pipelineLimit == 0:
                         self.questionDataResourceIdList.extend(p2.execute())
                     elif totalLength-index==1:
                         self.questionDataResourceIdList.extend(p2.execute())
@@ -164,7 +170,7 @@ class QuescommentSpider(scrapy.Spider):
         p15.lpush(str(self.name),self.spider_number)
         p15.llen(str(self.name))
         finishedCount= p15.execute()[1]
-        pipelineLimit = 10000
+        pipelineLimit = 100000
         batchLimit = 1000
 
         if int(self.partition)==int(finishedCount):
@@ -217,13 +223,14 @@ class QuescommentSpider(scrapy.Spider):
             questionIdList = redis11.keys()
             p11 = redis11.pipeline()
             tmpQuestionList = []
+            totalLength = len(questionIdList)
             for index, questionId in enumerate(questionIdList):
                 p11.smembers(str(questionId))
                 tmpQuestionList.append(str(questionId))
 
                 if (index + 1) % pipelineLimit == 0:
                     questionCommentDataIdSetList = p11.execute()
-                    with  questionTable.batch(batch_size=batchLimit, transaction=True):
+                    with  questionTable.batch(batch_size=batchLimit):
                         for innerIndex, questionCommentDataIdSet in enumerate(questionCommentDataIdSetList):
 
                             questionTable.put(str(tmpQuestionList[innerIndex]),
@@ -231,9 +238,9 @@ class QuescommentSpider(scrapy.Spider):
                         tmpQuestionList=[]
 
 
-                elif len(questionIdList) - index == 1:
+                elif  totalLength - index == 1:
                     questionCommentDataIdSetList = p11.execute()
-                    with  questionTable.batch(batch_size=batchLimit, transaction=True):
+                    with  questionTable.batch(batch_size=batchLimit):
                         for innerIndex, questionCommentDataIdSet in enumerate(questionCommentDataIdSetList):
 
                             questionTable.put(str(tmpQuestionList[innerIndex]),

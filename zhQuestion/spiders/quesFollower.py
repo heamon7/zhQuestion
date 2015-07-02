@@ -60,10 +60,10 @@ class QuesfollowerSpider(scrapy.Spider):
             if self.partition!=1:
                 logging.warning('Master partition is '+str(self.partition))
                 self.questionIdList = self.questionIdList[self.spider_number*totalLength/self.partition:(self.spider_number+1)*totalLength/self.partition]
-
+                totalLength = len(self.questionIdList)
                 for index ,questionId in enumerate(self.questionIdList):
-                    p2.lindex(str(questionId),6)
-                    if index%self.pipelineLimit ==0:
+                    p2.lindex(str(questionId),3)
+                    if (index+1)%self.pipelineLimit == 0:
                         self.questionFollowerCountList.extend(p2.execute())
                     elif totalLength-index==1:
                         self.questionFollowerCountList.extend(p2.execute())
@@ -83,7 +83,7 @@ class QuesfollowerSpider(scrapy.Spider):
             else:
                 logging.warning('Master  partition is '+str(self.partition))
                 for index ,questionId in enumerate(self.questionIdList):
-                    p2.lindex(str(questionId),6)
+                    p2.lindex(str(questionId),3)
                     if index%self.pipelineLimit ==0:
                         self.questionFollowerCountList.extend(p2.execute())
                     elif totalLength-index==1:
@@ -94,10 +94,10 @@ class QuesfollowerSpider(scrapy.Spider):
             logging.warning('Slave number is '+str(self.spider_number) + ' partition is '+str(self.partition))
             if (self.partition-self.spider_number)!=1:
                 self.questionIdList = self.questionIdList[self.spider_number*totalLength/self.partition:(self.spider_number+1)*totalLength/self.partition]
-
+                totalLength = len(self.questionIdList)
                 for index ,questionId in enumerate(self.questionIdList):
-                    p2.lindex(str(questionId),6)
-                    if index%self.pipelineLimit ==0:
+                    p2.lindex(str(questionId),3)
+                    if (index+1)%self.pipelineLimit == 0:
                         self.questionFollowerCountList.extend(p2.execute())
                     elif totalLength-index==1:
                         self.questionFollowerCountList.extend(p2.execute())
@@ -105,9 +105,10 @@ class QuesfollowerSpider(scrapy.Spider):
 
             else:
                 self.questionIdList = self.questionIdList[self.spider_number*totalLength/self.partition:]
+                totalLength = len(self.questionIdList)
                 for index ,questionId in enumerate(self.questionIdList):
-                    p2.lindex(str(questionId),6)
-                    if index%self.pipelineLimit ==0:
+                    p2.lindex(str(questionId),3)
+                    if (index+1)%self.pipelineLimit == 0:
                         self.questionFollowerCountList.extend(p2.execute())
                     elif totalLength-index==1:
                         self.questionFollowerCountList.extend(p2.execute())
@@ -221,7 +222,7 @@ class QuesfollowerSpider(scrapy.Spider):
         p15.lpush(str(self.name),self.spider_number)
         p15.llen(str(self.name))
         finishedCount= p15.execute()[1]
-        pipelineLimit = 10000
+        pipelineLimit = 100000
         batchLimit = 1000
 
         if int(self.partition)==int(finishedCount):
@@ -234,22 +235,23 @@ class QuesfollowerSpider(scrapy.Spider):
             questionIdList = redis11.keys()
             p11 = redis11.pipeline()
             tmpQuestionList = []
+            totalLength = len(questionIdList)
             for index, questionId in enumerate(questionIdList):
                 p11.smembers(str(questionId))
                 tmpQuestionList.append(str(questionId))
 
                 if (index + 1) % pipelineLimit == 0:
                     questionFollowerDataIdSetList = p11.execute()
-                    with  questionTable.batch(batch_size=batchLimit, transaction=True):
+                    with  questionTable.batch(batch_size=batchLimit):
                         for innerIndex, questionFollowerDataIdSet in enumerate(questionFollowerDataIdSetList):
                             questionTable.put(str(tmpQuestionList[innerIndex]),
                                               {'follower:dataIdList': str(list(questionFollowerDataIdSet))})
                         tmpQuestionList=[]
 
 
-                elif len(questionIdList) - index == 1:
+                elif totalLength - index == 1:
                     questionFollowerDataIdSetList = p11.execute()
-                    with  questionTable.batch(batch_size=batchLimit, transaction=True):
+                    with  questionTable.batch(batch_size=batchLimit):
                         for innerIndex, questionFollowerDataIdSet in enumerate(questionFollowerDataIdSetList):
                             questionTable.put(str(tmpQuestionList[innerIndex]),
                                               {'follower:dataIdList': str(list(questionFollowerDataIdSet))})
