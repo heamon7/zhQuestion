@@ -35,6 +35,7 @@ class QuescommentSpider(scrapy.Spider):
     def __init__(self,spider_type='Master',spider_number=0,partition=1,**kwargs):
         self.redis2 = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, password=settings.REDIS_PASSWORD,db=2)
 
+
         self.spider_type = str(spider_type)
         self.spider_number = int(spider_number)
         self.partition = int(partition)
@@ -46,6 +47,9 @@ class QuescommentSpider(scrapy.Spider):
 
         p2 = self.redis2.pipeline()
         if self.spider_type=='Master':
+            redis11 = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, password=settings.REDIS_PASSWORD,db=11)
+            redis11.flushdb()
+
             logging.warning('Master spider_type is '+self.spider_type)
             if self.partition!=1:
                 logging.warning('Master partition is '+str(self.partition))
@@ -108,6 +112,7 @@ class QuescommentSpider(scrapy.Spider):
 
         logging.warning('start_requests ing ......')
         logging.warning('totalCount to request is :'+str(len(self.questionIdList)))
+        logging.warning('totalDataIdCount to request is :'+str(len(self.questionDataResourceIdList)))
 
 
         for index ,questionDataResourceId in enumerate(self.questionDataResourceIdList):
