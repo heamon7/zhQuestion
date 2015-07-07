@@ -39,8 +39,8 @@ class QuesfollowerSpider(scrapy.Spider):
 
     def __init__(self,spider_type='Master',spider_number=0,partition=1,**kwargs):
 
-        self.redis0 = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, password=settings.REDIS_USER+':'+settings.REDIS_PASSWORD,db=0)
-        self.redis2 = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, password=settings.REDIS_USER+':'+settings.REDIS_PASSWORD,db=2)
+        # self.redis0 = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, password=settings.REDIS_USER+':'+settings.REDIS_PASSWORD,db=0)
+        self.redis2 = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, password=settings.REDIS_PASSWORD,db=2)
 
         self.spider_type = str(spider_type)
         self.spider_number = int(spider_number)
@@ -56,6 +56,10 @@ class QuesfollowerSpider(scrapy.Spider):
         p2 = self.redis2.pipeline()
 
         if self.spider_type=='Master':
+
+            redis11 = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, password=settings.REDIS_PASSWORD,db=11)
+            redis11.flushdb()
+
             logging.warning('Master spider_type is '+self.spider_type)
             if self.partition!=1:
                 logging.warning('Master partition is '+str(self.partition))
@@ -175,8 +179,9 @@ class QuesfollowerSpider(scrapy.Spider):
                                       )
         else:
             item =  QuesFollowerItem()
+            item['spiderName'] = self.name
             data = json.loads(response.body)
-            userCountRet = data['msg'][0]
+            userCountRet = int(data['msg'][0])
 
             item['offset'] = response.meta['offset']
             item['questionId'] = re.split('http://www.zhihu.com/question/(\d*)/followers',response.url)[1]
@@ -184,9 +189,14 @@ class QuesfollowerSpider(scrapy.Spider):
             if userCountRet:
                 res = Selector(text = data['msg'][1])
                 for sel in res.xpath('//div[contains(@class,"zm-profile-card")]'):
-                    item['userDataId'] = sel.xpath('button/@data-id').extract()[0]
+                    try:
+
+                        item['userDataId'] = sel.xpath('div[@class="zg-right"]/button/@data-id').extract()[0]
                     # 注意userLinkId中可能有中文
-                    item['userLinkId'] = sel.xpath('a[@class="zm-item-link-avatar"]/@href').re(r'/people/(.*)')[0]
+                        item['userLinkId'] = sel.xpath('a[@class="zm-item-link-avatar"]/@href').re(r'/people/(.*)')[0]
+                    except:
+                        item['userDataId']=''
+
 
                     # item['userImgUrl'] = sel.xpath('a[@class="zm-item-link-avatar"]/img/@src').extract()[0]
                     # item['userName'] = sel.xpath('h2/a/text()').extract()[0]
@@ -196,14 +206,13 @@ class QuesfollowerSpider(scrapy.Spider):
                     # item['userUpCount'] = sel.xpath('div[@class="details zg-gray"]/a[4]//text()').re(r'(\-?\d+)')[0]
 
                     #如果是匿名用户，则标记之
-                    if not item['userDataId']:
-                        item['userDataId']=''
+
 
                     yield item
 
             else:
                 #没有用户
-                item['userDataIdList']=''
+                item['userDataId']=''
                 yield item
 
 

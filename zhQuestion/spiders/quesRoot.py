@@ -75,6 +75,7 @@ class QuesfrontSpider(scrapy.Spider):
 
         for pageIndex in self.requestPageList:
             reqUrl = self.baseUrl %str(pageIndex)
+            logging.warning('reqUrl: %s',reqUrl)
             yield  Request(url = reqUrl,callback=self.parsePage)
 
 
@@ -84,6 +85,7 @@ class QuesfrontSpider(scrapy.Spider):
             yield Request(response.url,callback=self.parsePage)
         else:
             item = QuesRootItem()
+            logging.warning('response.url: %s \n response.body: %s',response.url,response.body)
             item['spiderName'] = self.name
             for sel in response.xpath('//div[@id="zh-topic-questions-list"]//div[@itemprop="question"]'):
 

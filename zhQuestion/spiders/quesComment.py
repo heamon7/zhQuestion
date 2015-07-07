@@ -146,14 +146,17 @@ class QuescommentSpider(scrapy.Spider):
                     item['commentContent'] =sel.xpath('div[@class="zm-comment-content-wrap"]/div[@class="zm-comment-content"]/text()').extract()[0]
                     item['commentDate'] = sel.xpath('div[@class="zm-comment-content-wrap"]/div[@class="zm-comment-ft"]/span[@class="date"]/text()').extract()[0]
                     item['commentUpCount'] = sel.xpath('div[@class="zm-comment-content-wrap"]/div[@class="zm-comment-ft"]/span[contains(@class,"like-num")]/em/text()').extract()[0]
-                    try:
-                        item['userName'] = sel.xpath('a[@class="zm-item-link-avatar"]//@title').extract()[0]
-                    except:
-                        item['userName'] =''
+
                     try:
                         item['userLinkId'] = sel.xpath('a[@class="zm-item-link-avatar"]/@href').re(r'/people/(.*)')[0]
                     except:
                         item['userLinkId']=''
+
+                    try:
+                        item['userName'] = sel.xpath('a[@class="zm-item-link-avatar"]//@title').extract()[0]
+                    except:
+                        item['userName'] =''
+
                     try:
                         item['userImgLink'] = sel.xpath('a[@class="zm-item-link-avatar"]/img/@src').extract()[0]
                     except:

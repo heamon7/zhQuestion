@@ -54,6 +54,7 @@ DUPEFILTER_CLASS = 'zhQuestion.custom_filters.SeenURLFilter'
 
 
 
-UPDATE_PERIOD = '432000' #最快5天更新一次
+ROOT_UPDATE_PERIOD = '432000' #最快5天更新一次
+INFO_UPDATE_PERIOD = '432000' #最快5天更新一次
 
 
