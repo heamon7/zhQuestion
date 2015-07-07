@@ -91,7 +91,7 @@ class QuesRootPipeline(object):
                                  ,str(item['subTopicId'])
                                  # ,str(questionIndex)
                                  ,str(recordTimestamp))
-                    p1.trim(str(item['questionId']),0,2)
+                    p1.ltrim(str(item['questionId']),0,2)
                     p1.execute()
                     # isTopQuestion = 1 if item['isTopQuestion'] == 'true' else 0
                     quesBasicDict={'basic:quesId':str(item['questionId']),
