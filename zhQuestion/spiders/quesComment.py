@@ -35,10 +35,20 @@ class QuescommentSpider(scrapy.Spider):
     def __init__(self,spider_type='Master',spider_number=0,partition=1,**kwargs):
         self.redis2 = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, password=settings.REDIS_PASSWORD,db=2)
 
+        try:
+            self.spider_type = str(spider_type)
+            self.spider_number = int(spider_number)
+            self.partition = int(partition)
+            self.email= settings.EMAIL_LIST[self.spider_number]
+            self.password=settings.PASSWORD_LIST[self.spider_number]
 
-        self.spider_type = str(spider_type)
-        self.spider_number = int(spider_number)
-        self.partition = int(partition)
+        except:
+            self.spider_type = 'Master'
+            self.spider_number = 0
+            self.partition = 1
+            self.email= settings.EMAIL_LIST[self.spider_number]
+            self.password=settings.PASSWORD_LIST[self.spider_number]
+
 
     def start_requests(self):
 

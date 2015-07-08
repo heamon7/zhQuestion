@@ -24,7 +24,7 @@ class QuesRootPipeline(object):
         self.redis0 = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, password=settings.REDIS_PASSWORD,db=0)
         self.redis1 = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, password=settings.REDIS_PASSWORD,db=1)
         # self.redis11 = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, password=settings.REDIS_PASSWORD,db=11)
-        connection = happybase.Connection(settings.HBASE_HOST)
+        connection = happybase.Connection(settings.HBASE_HOST,timeout=10000)
         self.questionTable = connection.table('question')
 
     def process_item(self, item, spider):
@@ -138,7 +138,7 @@ class QuesInfoPipeline(object):
 
         self.redis2 = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, password=settings.REDIS_PASSWORD,db=2)
 
-        connection = happybase.Connection(settings.HBASE_HOST)
+        connection = happybase.Connection(settings.HBASE_HOST,timeout=10000)
         self.questionTable = connection.table('question')
 
     def process_item(self, item, spider):
@@ -231,7 +231,7 @@ class QuesCommentPipeline(object):
 
         self.redis3 = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, password=settings.REDIS_PASSWORD,db=3)
         self.redis11 = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, password=settings.REDIS_PASSWORD,db=11)
-        connection = happybase.Connection(settings.HBASE_HOST)
+        connection = happybase.Connection(settings.HBASE_HOST,timeout=10000)
         self.commentTable = connection.table('comment')
 
     def process_item(self, item, spider):
@@ -273,7 +273,7 @@ class QuesFollowerPipeline(object):
 
         self.redis3 = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, password=settings.REDIS_PASSWORD,db=3)
         self.redis11 = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, password=settings.REDIS_PASSWORD,db=11)
-        connection = happybase.Connection(settings.HBASE_HOST)
+        connection = happybase.Connection(settings.HBASE_HOST,timeout=10000)
         self.userTable = connection.table('user')
 #这里简单处理，不考虑关注者的前后顺序，处理为一个集合,每个关注在数据库里存为一条记录，在缓存里存为一个hash表
     def process_item(self, item, spider):

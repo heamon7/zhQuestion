@@ -24,11 +24,19 @@ class QuesfrontSpider(scrapy.Spider):
 
     def __init__(self,spider_type='Master',spider_number=0,partition=1,**kwargs):
 
-        self.spider_type = str(spider_type)
-        self.spider_number = int(spider_number)
-        self.partition = int(partition)
-        self.email= settings.EMAIL_LIST[self.spider_number]
-        self.password=settings.PASSWORD_LIST[self.spider_number]
+        try:
+            self.spider_type = str(spider_type)
+            self.spider_number = int(spider_number)
+            self.partition = int(partition)
+            self.email= settings.EMAIL_LIST[self.spider_number]
+            self.password=settings.PASSWORD_LIST[self.spider_number]
+
+        except:
+            self.spider_type = 'Master'
+            self.spider_number = 0
+            self.partition = 1
+            self.email= settings.EMAIL_LIST[self.spider_number]
+            self.password=settings.PASSWORD_LIST[self.spider_number]
 
     def parse(self, response):
 
@@ -73,7 +81,7 @@ class QuesfrontSpider(scrapy.Spider):
 
 
 
-        for pageIndex in self.requestPageList:
+        for pageIndex in self.requestPageList[0:5]:
             reqUrl = self.baseUrl %str(pageIndex)
             # logging.warning('reqUrl: %s',reqUrl)
             yield  Request(url = reqUrl,callback=self.parsePage)
@@ -81,6 +89,7 @@ class QuesfrontSpider(scrapy.Spider):
 
 
     def parsePage(self,response):
+        # logging.warning('papapa')
         if response.status != 200:
             yield Request(response.url,callback=self.parsePage)
         else:
