@@ -26,7 +26,7 @@ class QuesfollowerSpider(scrapy.Spider):
     start_urls = (
         'http://www.zhihu.com/',
     )
-    handle_httpstatus_list = [401,429,500,502,504]
+    handle_httpstatus_list = [401,429,500,502,503,504]
     baseUrl = "http://www.zhihu.com/question/"
     questionIdList = []
     questionFollowerCountList = []
@@ -131,29 +131,54 @@ class QuesfollowerSpider(scrapy.Spider):
 
         logging.warning('start_requests ing ......')
         logging.warning('totalCount to request is :'+str(len(self.questionIdList)))
-        yield Request("http://www.zhihu.com/",callback = self.post_login)
+        # yield Request("http://www.zhihu.com/",callback = self.post_login)
+        yield Request(url ='http://www.zhihu.com',
+                      cookies=settings.COOKIES_LIST[self.spider_number],
+                      callback =self.after_login)
+    #
+    # def post_login(self,response):
+    #
+    #     logging.warning('post_login ing ......')
+    #
+    #     xsrfValue = response.xpath('/html/body/input[@name= "_xsrf"]/@value').extract()[0]
+    #     yield FormRequest.from_response(url='http://www.zhihu.com/login/email',
+    #                                       formdata={
+    #                                           '_xsrf':xsrfValue,
+    #                                           'email':self.email,
+    #                                           'password':self.password,
+    #                                           'remember_me': 'true'
+    #                                       },
+    #                                       dont_filter = True,
+    #                                       callback = self.after_login,
+    #                                       )
 
-    def post_login(self,response):
-
-        logging.warning('post_login ing ......')
-        xsrfValue = response.xpath('/html/body/input[@name= "_xsrf"]/@value').extract()[0]
-        yield FormRequest.from_response(response,
-                                          formdata={
-                                              '_xsrf':xsrfValue,
-                                              'email':self.email,
-                                              'password':self.password,
-                                              'rememberme': 'y'
-                                          },
-                                          dont_filter = True,
-                                          callback = self.after_login,
-                                          )
+    # def post_login(self,response):
+    #
+    #     # logging.warning('post_login ing ......')
+    #     #
+    #     # xsrfValue = response.xpath('/html/body/input[@name= "_xsrf"]/@value').extract()[0]
+    #     # yield FormRequest.from_response(url='http://www.zhihu.com/login/email',
+    #     #                                   formdata={
+    #     #                                       '_xsrf':xsrfValue,
+    #     #                                       'email':self.email,
+    #     #                                       'password':self.password,
+    #     #                                       'remember_me': 'true'
+    #     #                                   },
+    #     #                                   dont_filter = True,
+    #     #                                   callback = self.after_login,
+    #     #                                   )
+    #     yield Request(url ='http://www.zhihu.com',
+    #                   cookies=settings.COOKIES_LIST[self.spider_number],
+    #                   callback =self.after_login)
 
     def after_login(self,response):
         try:
             loginUserLink = response.xpath('//div[@id="zh-top-inner"]/div[@class="top-nav-profile"]/a/@href').extract()[0]
-            logging.warning('Successfully login with %s  %s  %s',str(loginUserLink),str(self.email),str(self.password))
+            # logging.warning('Successfully login with %s  %s  %s',str(loginUserLink),str(self.email),str(self.password))
+            logging.warning('Successfully login with %s  ',str(loginUserLink))
+
         except:
-            logging.error('Login failed! %s   %s',self.email,self.password)
+            logging.error('Login failed! %s',self.email)
 
         for index ,questionId in enumerate(self.questionIdList):
             if self.questionFollowerCountList[index]:

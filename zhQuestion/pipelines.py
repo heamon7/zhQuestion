@@ -244,16 +244,16 @@ class QuesCommentPipeline(object):
                 if item['userLinkId']:
                     self.redis3.sadd('userLinkIdSet',item['userLinkId'])
                 #无论之前有无记录，都会更新redis里的数据
-                commentDict={'comment:srcId':str(questionId),
-                                'comment:DataId':str(item['commentDataId']),
-                               'comment:content':str(item['commentContent'].encode('utf-8')),
+                commentDict={'detail:srcId':str(questionId),
+                                'detail:DataId':str(item['commentDataId']),
+                               'detail:content':str(item['commentContent'].encode('utf-8')),
                                 #日期可能含有中文
-                               'comment:date': str(item['commentDate'].encode('utf-8')),
-                               'comment:upCount': str(item['commentUpCount']),
-                               'comment:userName': item['userName'].encode('utf-8'),
-                               'comment:userLinkId': item['userLinkId'].encode('utf-8'),
-                               'comment:userImgLink': str(item['userImgLink']),
-                                'comment:type':'q'
+                               'detail:date': str(item['commentDate'].encode('utf-8')),
+                               'detail:upCount': str(item['commentUpCount']),
+                               'detail:userName': item['userName'].encode('utf-8'),
+                               'detail:userLinkId': item['userLinkId'].encode('utf-8'),
+                               'detail:userImgLink': str(item['userImgLink']),
+                                'detail:type':'q'
                                }
                 try:
                     self.commentTable.put(str(item['commentDataId']),commentDict)

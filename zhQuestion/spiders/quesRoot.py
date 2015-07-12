@@ -18,7 +18,7 @@ class QuesfrontSpider(scrapy.Spider):
     name = "quesRoot"
     allowed_domains = ["zhihu.com"]
     start_urls = ["http://www.zhihu.com/topic/19776749/questions"]
-    handle_httpstatus_list = [401,429,500,502,504]
+    handle_httpstatus_list = [401,429,500,502,503,504]
     baseUrl = 'http://www.zhihu.com/topic/19776749/questions?page=%s'
 
 
@@ -81,7 +81,7 @@ class QuesfrontSpider(scrapy.Spider):
 
 
 
-        for pageIndex in self.requestPageList[0:5]:
+        for pageIndex in self.requestPageList:
             reqUrl = self.baseUrl %str(pageIndex)
             # logging.warning('reqUrl: %s',reqUrl)
             yield  Request(url = reqUrl,callback=self.parsePage)

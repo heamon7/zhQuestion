@@ -25,13 +25,14 @@ class QuesinfoerSpider(scrapy.Spider):
     start_urls = (
         'http://www.zhihu.com/',
     )
-    handle_httpstatus_list = [401,429,500,502,504]
+    handle_httpstatus_list = [401,429,500,502,503,504]
     baseUrl = "http://www.zhihu.com/question/"
 
     quesIndex =0
 
 
     def __init__(self,spider_type='Master',spider_number=0,partition=1,**kwargs):
+        self.redis1 = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, password=settings.REDIS_PASSWORD,db=1)
 
         try:
             self.spider_type = str(spider_type)
@@ -93,7 +94,7 @@ class QuesinfoerSpider(scrapy.Spider):
                                               '_xsrf':xsrfValue,
                                               'email':self.email,
                                               'password':self.password,
-                                              'rememberme': 'y'
+                                              'remember_me': 'true'
                                           },
                                           dont_filter = True,
                                           callback = self.after_login,

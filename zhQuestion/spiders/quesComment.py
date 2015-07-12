@@ -22,7 +22,7 @@ class QuescommentSpider(scrapy.Spider):
     start_urls = (
         'http://www.zhihu.com/',
     )
-    handle_httpstatus_list = [401,429,500,502,504]
+    handle_httpstatus_list = [401,429,500,502,503,504]
     baseUrl = 'http://www.zhihu.com/node/QuestionCommentListV2?params={"question_id":%s}'
     questionIdList=[]
     questionDataResourceIdList=[]
