@@ -84,28 +84,40 @@ class QuesinfoerSpider(scrapy.Spider):
         logging.warning('start_requests ing ......')
         logging.warning('totalCount to request is :'+str(len(self.questionIdList)))
 
-        yield Request("http://www.zhihu.com",callback = self.post_login)
+        yield Request(url ='http://www.zhihu.com',
+                      cookies=settings.COOKIES_LIST[self.spider_number],
+                      callback =self.after_login)
 
-
-    def post_login(self,response):
-        xsrfValue = response.xpath('/html/body/input[@name= "_xsrf"]/@value').extract()[0]
-        yield FormRequest.from_response(response,
-                                          formdata={
-                                              '_xsrf':xsrfValue,
-                                              'email':self.email,
-                                              'password':self.password,
-                                              'remember_me': 'true'
-                                          },
-                                          dont_filter = True,
-                                          callback = self.after_login,
-                                          )
+    #     yield Request("http://www.zhihu.com",callback = self.post_login)
+    #
+    #
+    # def post_login(self,response):
+    #     xsrfValue = response.xpath('/html/body/input[@name= "_xsrf"]/@value').extract()[0]
+    #     yield FormRequest.from_response(response,
+    #                                       formdata={
+    #                                           '_xsrf':xsrfValue,
+    #                                           'email':self.email,
+    #                                           'password':self.password,
+    #                                           'remember_me': 'true'
+    #                                       },
+    #                                       dont_filter = True,
+    #                                       callback = self.after_login,
+    #                                       )
 
     def after_login(self,response):
+        # try:
+        #     loginUserLink = response.xpath('//div[@id="zh-top-inner"]/div[@class="top-nav-profile"]/a/@href').extract()[0]
+        #     logging.warning('Successfully login with %s  %s  %s',str(loginUserLink),str(self.email),str(self.password))
+        # except:
+        #     logging.error('Login failed! %s   %s',self.email,self.password)
         try:
             loginUserLink = response.xpath('//div[@id="zh-top-inner"]/div[@class="top-nav-profile"]/a/@href').extract()[0]
-            logging.warning('Successfully login with %s  %s  %s',str(loginUserLink),str(self.email),str(self.password))
+            # logging.warning('Successfully login with %s  %s  %s',str(loginUserLink),str(self.email),str(self.password))
+            logging.warning('Successfully login with %s  ',str(loginUserLink))
+
         except:
-            logging.error('Login failed! %s   %s',self.email,self.password)
+            logging.error('Login failed! %s',self.email)
+
         #inspect_response(response,self)
         #self.urls = ['http://www.zhihu.com/question/28626263','http://www.zhihu.com/question/22921426','http://www.zhihu.com/question/20123112']
         for questionId in self.questionIdList:
