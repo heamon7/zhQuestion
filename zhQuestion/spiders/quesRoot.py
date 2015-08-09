@@ -136,6 +136,18 @@ class QuesfrontSpider(scrapy.Spider):
             #删除其他标记
             redis15.ltrim(str(self.name),0,0)
 
+            #清空队列
+            redis15.rpop(self.name)
+            #清空缓存数据的redis11数据库
+            # redis11.flushdb()
+
+            logging.warning('Begin to request next schedule')
+            response = requests.post('http://'+settings.NEXT_SCHEDULE_SCRAPYD_HOST[self.name]+':'+settings.NEXT_SCHEDULE_SCRAPYD_PORT[self.name]+'/schedule.json',data=settings.NEXT_SCHEDULE_PAYLOAD[self.name])
+            logging.warning('Response: '+' '+str(response))
+        logging.warning('finished close.....')
+
+
+
             # connection = happybase.Connection(settings.HBASE_HOST)
             # questionTable = connection.table('question')
             #
@@ -175,18 +187,6 @@ class QuesfrontSpider(scrapy.Spider):
             #                                                        'basic:quesTimestamp':quesBasicDict['basic:quesTimestamp'],
             #                                                        # 'basic:quesName':item['questionName'].encode('utf-8'),
             #                                                        'basic:quesIndex':quesBasicDict['basic:quesIndex']})
-            #清空队列
-            redis15.rpop(self.name)
-            #清空缓存数据的redis11数据库
-            # redis11.flushdb()
-
-            logging.warning('Begin to request next schedule')
-            response = requests.post('http://'+settings.NEXT_SCHEDULE_SCRAPYD_HOST[self.name]+':'+settings.NEXT_SCHEDULE_SCRAPYD_PORT[self.name]+'/schedule.json',data=settings.NEXT_SCHEDULE_PAYLOAD[self.name])
-            logging.warning('Response: '+' '+str(response))
-        logging.warning('finished close.....')
-
-
-
 
 
  # self.stats = stats

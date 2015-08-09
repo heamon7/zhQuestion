@@ -14,7 +14,7 @@ import time
 import re
 import redis
 import happybase
-
+from pymongo import MongoClient
 
 # 这里统一采取先将本爬虫本次爬到的数据存入redis，待本次爬取完毕后，统一将数据持久化到hbase，
 # 而不是像之前那样，拿到一个数据就往hbase里存一次
@@ -23,66 +23,20 @@ class QuesRootPipeline(object):
     def __init__(self):
         self.redis0 = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, password=settings.REDIS_PASSWORD,db=0)
         self.redis1 = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, password=settings.REDIS_PASSWORD,db=1)
+
+        client = MongoClient(settings.MONGO_URL)
+        db = client['zhihu']
+        col_question = db['question']
         # self.redis11 = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, password=settings.REDIS_PASSWORD,db=11)
-        connection = happybase.Connection(settings.HBASE_HOST,timeout=10000)
-        self.questionTable = connection.table('question')
+        # connection = happybase.Connection(settings.HBASE_HOST,timeout=10000)
+        # self.questionTable = connection.table('question')
 
     def process_item(self, item, spider):
         if item['spiderName'] == 'quesRoot':
-        #保证此次操作的原子性,其实如果是分布式的话，因为有分割，应该是不会冲突的，但是随着时间的增加还是有可能交叉
-        #如果正在更新当前这个问题的data 则直接跳过
-            # if  self.redis0.hsetnx('questionLock',str(item['questionId']),1):
-                #使用try，是为了确保锁会被解除。
-                # try:
-                #     currentTimestamp = int(time.time())
-                #     # 如果之前有过该问题的记录，这里可以直接跳过，并不需要更新
-                #     # but 为了防止第一次插入数据库失败，需要以后有更新操作，这里更新时间可以设置长一些
-                #     result = self.redis1.lrange(str(item['questionId']),0,1)
-                #
-                #     if result:
-                #
-                #         [recordTimestamp,questionIndex]=result
-                #     else:
-                #         [recordTimestamp,questionIndex]=('','')
-                #
-                #     p0= self.redis0.pipeline()
-                #     p1 = self.redis1.pipeline()
-                #     if not recordTimestamp:
-                #         questionIndex = self.redis0.incr('totalCount',1)
-                #         #为了减少redis的使用空间
-                #         # p0.hsetnx('questionIndex'
-                #         #           ,str(questionIndex)
-                #         #           ,str(item['questionId']))
-                #         p0.hsetnx('questionIdIndex'
-                #                   ,str(item['questionId'])
-                #                   ,str(questionIndex))
-                #         p0.execute()
-                #
-                #         p1.incr('totalCount',1)
-                #         p1.lpush(str(item['questionId'])
-                #                      ,str(item['questionTimestamp'])
-                #                      ,str(item['subTopicId'])
-                #                      ,str(questionIndex)
-                #                      ,str(recordTimestamp))
-                #         p1.execute()
-                #使用try，是为了确保锁会被解除。
             try:
                 currentTimestamp = int(time.time())
-                # 如果之前有过该问题的记录，这里可以直接跳过，并不需要更新
-                # but 为了防止第一次插入数据库失败，需要以后有更新操作，这里更新时间可以设置长一些
-                # result = self.redis1.lindex(str(item['questionId']),0)
                 recordTimestamp = self.redis1.lindex(str(item['questionId']),0)
 
-                # if result:
-                #
-                #     recordTimestamp=result
-                # else:
-                #     recordTimestamp=''
-
-                # p0= self.redis0.pipeline()
-
-
-                # 为了防止第一次插入数据库失败，需要以后有更新操作，这里更新时间可以设置长一些
                 if not recordTimestamp or (int(currentTimestamp)-int(recordTimestamp) > int(settings.ROOT_UPDATE_PERIOD)):        # the latest record time in hbase
                     recordTimestamp = currentTimestamp
                     p1 = self.redis1.pipeline()
@@ -94,33 +48,36 @@ class QuesRootPipeline(object):
                     p1.ltrim(str(item['questionId']),0,2)
                     p1.execute()
                     # isTopQuestion = 1 if item['isTopQuestion'] == 'true' else 0
-                    quesBasicDict={'basic:quesId':str(item['questionId']),
+                    quesBasicDict={'ques_id':str(item['questionId']),
                                                            # 'basic:answerCount':str(item['answerCount']),
                                                            # 'basic:isTopQues':str(isTopQuestion),
                                                            # 'basic:subTopicName':item['subTopicName'].encode('utf-8'),
-                                                           'basic:subTopicId':str(item['subTopicId']),
-                                                           'basic:quesTimestamp':str(item['questionTimestamp']),
+                                                           'sub_topic_id':str(item['subTopicId']),
+                                                           'ques_timestamp':str(item['questionTimestamp']),
                                                            # 'basic:quesName':item['questionName'].encode('utf-8'),
                                                            # 'basic:quesIndex':str(questionIndex)
                                                            }
                     try:
                         # self.redis11.hsetnx(str(item['questionId']),quesBasicDict)
+                        self.col_question.insert_one(quesBasicDict)
 
-
-                        self.questionTable.put(str(item['questionId']),quesBasicDict)
+                        # self.questionTable.put(str(item['questionId']),quesBasicDict)
                         # self.redis1.lset(str(item['questionId']),0,str(recordTimestamp))
                     except Exception,e:
-                        logging.error('Error with put questionId into redis11: '+str(e)+' try again......')
+                        print quesBasicDict
+                        logging.error('Error with put questionId into hbase: '+str(e)+' try again......')
                         try:
 
-                            self.questionTable.put(str(item['questionId']),quesBasicDict)
+
+                            # self.questionTable.put(str(item['questionId']),quesBasicDict)
+                            self.col_question.insert_one(quesBasicDict)
 
                             # self.redis11.hsetnx(str(item['questionId']),quesBasicDict)
                             # self.redis1.lset(str(item['questionId']),0,str(recordTimestamp))
 
                             logging.error(' tried again and successfully put data into redis11 ......')
                         except Exception,e:
-                            logging.error('Error with put questionId into redis11: '+str(e)+'tried again and failed')
+                            logging.error('Error with put questionId into hbase: '+str(e)+'tried again and failed')
                     #更新记录的时间戳
 
             except Exception,e:
