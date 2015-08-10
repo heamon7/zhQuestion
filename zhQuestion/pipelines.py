@@ -26,7 +26,7 @@ class QuesRootPipeline(object):
 
         client = MongoClient(settings.MONGO_URL)
         db = client['zhihu']
-        col_question = db['question']
+        self.col_question = db['question']
         # self.redis11 = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, password=settings.REDIS_PASSWORD,db=11)
         # connection = happybase.Connection(settings.HBASE_HOST,timeout=10000)
         # self.questionTable = connection.table('question')
@@ -59,7 +59,7 @@ class QuesRootPipeline(object):
                                                            }
                     try:
                         # self.redis11.hsetnx(str(item['questionId']),quesBasicDict)
-                        self.col_question.insert_one(quesBasicDict)
+                        self.col_question.replace_one({'ques_id':str(item['questionId'])},quesBasicDict,True)
 
                         # self.questionTable.put(str(item['questionId']),quesBasicDict)
                         # self.redis1.lset(str(item['questionId']),0,str(recordTimestamp))
@@ -70,7 +70,7 @@ class QuesRootPipeline(object):
 
 
                             # self.questionTable.put(str(item['questionId']),quesBasicDict)
-                            self.col_question.insert_one(quesBasicDict)
+                            self.col_question.replace_one({'ques_id':str(item['questionId'])},quesBasicDict,True)
 
                             # self.redis11.hsetnx(str(item['questionId']),quesBasicDict)
                             # self.redis1.lset(str(item['questionId']),0,str(recordTimestamp))
@@ -95,8 +95,8 @@ class QuesInfoPipeline(object):
 
         self.redis2 = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, password=settings.REDIS_PASSWORD,db=2)
 
-        connection = happybase.Connection(settings.HBASE_HOST,timeout=10000)
-        self.questionTable = connection.table('question')
+        # connection = happybase.Connection(settings.HBASE_HOST,timeout=10000)
+        # self.questionTable = connection.table('question')
 
     def process_item(self, item, spider):
         if item['spiderName'] == 'quesInfo':
@@ -188,8 +188,8 @@ class QuesCommentPipeline(object):
 
         self.redis3 = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, password=settings.REDIS_PASSWORD,db=3)
         self.redis11 = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, password=settings.REDIS_PASSWORD,db=11)
-        connection = happybase.Connection(settings.HBASE_HOST,timeout=10000)
-        self.commentTable = connection.table('comment')
+        # connection = happybase.Connection(settings.HBASE_HOST,timeout=10000)
+        # self.commentTable = connection.table('comment')
 
     def process_item(self, item, spider):
         if item['spiderName'] == 'quesComment':
@@ -230,8 +230,8 @@ class QuesFollowerPipeline(object):
 
         self.redis3 = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, password=settings.REDIS_PASSWORD,db=3)
         self.redis11 = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, password=settings.REDIS_PASSWORD,db=11)
-        connection = happybase.Connection(settings.HBASE_HOST,timeout=10000)
-        self.userTable = connection.table('user')
+        # connection = happybase.Connection(settings.HBASE_HOST,timeout=10000)
+        # self.userTable = connection.table('user')
 #这里简单处理，不考虑关注者的前后顺序，处理为一个集合,每个关注在数据库里存为一条记录，在缓存里存为一个hash表
     def process_item(self, item, spider):
         #这里只取用户的linkId作为下一步userInfo的源，userDataId只是存到questionFollower里
