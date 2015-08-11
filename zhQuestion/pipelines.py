@@ -15,6 +15,7 @@ import re
 import redis
 import happybase
 from pymongo import MongoClient
+import datetime
 
 # 这里统一采取先将本爬虫本次爬到的数据存入redis，待本次爬取完毕后，统一将数据持久化到hbase，
 # 而不是像之前那样，拿到一个数据就往hbase里存一次
@@ -40,49 +41,50 @@ class QuesRootPipeline(object):
                 if not recordTimestamp or (int(currentTimestamp)-int(recordTimestamp) > int(settings.ROOT_UPDATE_PERIOD)):        # the latest record time in hbase
                     recordTimestamp = currentTimestamp
                     p1 = self.redis1.pipeline()
-                    p1.lpush(str(item['questionId'])
-                                 ,str(item['questionTimestamp'])
-                                 ,str(item['subTopicId'])
+                    p1.lpush(int(item['questionId'].strip())
+                                 ,int(item['questionTimestamp'].strip())
+                                 ,item['subTopicId'].strip()
                                  # ,str(questionIndex)
-                                 ,str(recordTimestamp))
-                    p1.ltrim(str(item['questionId']),0,2)
+                                 ,int(recordTimestamp.strip()))
+                    p1.ltrim(int(item['questionId']),0,2)
                     p1.execute()
                     # isTopQuestion = 1 if item['isTopQuestion'] == 'true' else 0
-                    quesBasicDict={'ques_id':str(item['questionId']),
+                    ques_basic_dict={'ques_id':int(item['questionId'].strip()),
                                                            # 'basic:answerCount':str(item['answerCount']),
                                                            # 'basic:isTopQues':str(isTopQuestion),
                                                            # 'basic:subTopicName':item['subTopicName'].encode('utf-8'),
-                                                           'sub_topic_id':str(item['subTopicId']),
-                                                           'ques_timestamp':str(item['questionTimestamp']),
+                                                           'sub_topic_id':item['subTopicId'].strip(),
+                                                           'ques_timestamp':int(item['questionTimestamp'].strip()),
+                                                           'updated_at': datetime.datetime.now()
                                                            # 'basic:quesName':item['questionName'].encode('utf-8'),
                                                            # 'basic:quesIndex':str(questionIndex)
                                                            }
                     try:
                         # self.redis11.hsetnx(str(item['questionId']),quesBasicDict)
-                        self.col_question.replace_one({'ques_id':str(item['questionId'])},quesBasicDict,True)
-
+                        # self.col_question.update_one({'ques_id':int(item['questionId'].strip())},{'$set':quesBasicDict},True)
+                        self.col_question.insert_one(ques_basic_dict)
                         # self.questionTable.put(str(item['questionId']),quesBasicDict)
                         # self.redis1.lset(str(item['questionId']),0,str(recordTimestamp))
                     except Exception,e:
-                        print quesBasicDict
-                        logging.error('Error with put questionId into hbase: '+str(e)+' try again......')
+                        logging.error('Error with put questionId into mongo: '+str(e)+' try again......')
                         try:
 
 
                             # self.questionTable.put(str(item['questionId']),quesBasicDict)
-                            self.col_question.replace_one({'ques_id':str(item['questionId'])},quesBasicDict,True)
-
+                            # self.col_question.update_one({'ques_id':int(item['questionId'].strip())},{'$set':quesBasicDict},True)
+                            self.col_question.insert_one(ques_basic_dict)
                             # self.redis11.hsetnx(str(item['questionId']),quesBasicDict)
                             # self.redis1.lset(str(item['questionId']),0,str(recordTimestamp))
 
-                            logging.error(' tried again and successfully put data into redis11 ......')
+                            logging.error(' tried again and successfully put data into mongo ......')
                         except Exception,e:
-                            logging.error('Error with put questionId into hbase: '+str(e)+'tried again and failed')
+                            logging.error('Error with put questionId into mongo: '+str(e)+'tried again and failed')
+                            logging.error('The item is %s',str(item))
                     #更新记录的时间戳
 
             except Exception,e:
                 logging.error('Error in try 0 with exception: '+str(e))
-
+                logging.error('The item is %s',str(item))
                 #解除锁
                 # self.redis0.hdel('questionLock',str(item['questionId']))
             return item
@@ -95,90 +97,89 @@ class QuesInfoPipeline(object):
 
         self.redis2 = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, password=settings.REDIS_PASSWORD,db=2)
 
+        client = MongoClient(settings.MONGO_URL)
+        db = client['zhihu']
+        self.col_question_info = db['questionInfo']
         # connection = happybase.Connection(settings.HBASE_HOST,timeout=10000)
         # self.questionTable = connection.table('question')
 
     def process_item(self, item, spider):
         if item['spiderName'] == 'quesInfo':
+            try:
+                questionId = int(item['questionId'])
+                currentTimestamp = int(time.time())
+                recordTimestamp = self.redis2.lindex(str(questionId),0)
+                # if result:
+                #     recordTimestamp =result
+                # else:
+                #     recordTimestamp=''
+                #无论之前有无记录，都会更新redis里的数据
+                if not recordTimestamp or (int(currentTimestamp)-int(recordTimestamp) > int(settings.INFO_UPDATE_PERIOD)):        # the latest record time in hbase
+                    recordTimestamp = currentTimestamp
+                    p2 = self.redis2.pipeline()
+                    p2.lpush(int(questionId)
+                             # ,int(questionId)
+                             ,str(item['dataResourceId'])
+                             # ,str(isTopQuestion)
+                             ,int(item['questionFollowerCount'])
 
-            questionId = str(item['questionId'])
+                             ,int(item['questionAnswerCount'])
+                             # 其实commentCount也可以去掉
+                             ,int(item['quesCommentCount'])
+                             # ,str(item['questionShowTimes'])
 
+                             # ,str(item['topicRelatedFollowerCount'])
+                             # ,str(item['visitsCount'])
+                             ,int(recordTimestamp))
 
+                    p2.ltrim(int(questionId),0,4)
+                    p2.execute()
 
-            currentTimestamp = int(time.time())
+                    isTopQuestion = 1 if item['isTopQuestion'] == 'true' else 0
 
-            recordTimestamp = self.redis2.lindex(str(questionId),0)
-            # if result:
-            #     recordTimestamp =result
-            # else:
-            #     recordTimestamp=''
-
-
-            #无论之前有无记录，都会更新redis里的数据
-
-
-
-            if not recordTimestamp or (int(currentTimestamp)-int(recordTimestamp) > int(settings.INFO_UPDATE_PERIOD)):        # the latest record time in hbase
-                recordTimestamp = currentTimestamp
-                p2 = self.redis2.pipeline()
-                p2.lpush(str(questionId)
-                         # ,int(questionId)
-                         ,str(item['dataResourceId'])
-                         # ,str(isTopQuestion)
-                         ,str(item['questionFollowerCount'])
-
-                         ,str(item['questionAnswerCount'])
-                         # 其实commentCount也可以去掉
-                         ,str(item['quesCommentCount'])
-                         # ,str(item['questionShowTimes'])
-
-                         # ,str(item['topicRelatedFollowerCount'])
-                         # ,str(item['visitsCount'])
-                         ,str(recordTimestamp))
-
-                p2.ltrim(str(questionId),0,4)
-                p2.execute()
-
-                isTopQuestion = 1 if item['isTopQuestion'] == 'true' else 0
-
-                quesDetailDict={'detail:quesId':str(questionId),
-                                'detail:idZnonceContent':str(item['idZnonceContent']),
-                               'detail:dataUrlToken':str(item['dataUrlToken']),
-                               'detail:isTopQues':str(isTopQuestion),
-                               'detail:tagLabelIdList': str(item['tagLabelIdList']),
-                               'detail:tagLabelDataTopicIdList': str(item['tagLabelDataTopicIdList']),
-                               'detail:quesTitle': item['questionTitle'].encode('utf-8'),
-                               'detail:dataResourceId': str(item['dataResourceId']),
-                               'detail:quesAnswerCount': str(item['questionAnswerCount']),
-                               'detail:quesFollowerCount': str(item['questionFollowerCount']),
-                               'detail:quesLatestActiveTime': item['questionLatestActiveTime'].encode('utf-8'),
-                               'detail:quesShowTimes': str(item['questionShowTimes']),
-                               'detail:topicRelatedFollowerCount': str(item['topicRelatedFollowerCount']),
-                               'detail:quesContent': item['questionDetail'].encode('utf-8'),
-                               'detail:relatedQuesLinkList': str(item['relatedQuestionLinkList']),
-                               'detail:quesCommentCount': str(item['quesCommentCount']),
-                               'detail:visitsCount': str(item['visitsCount'])}
+                    ques_detail_dict={'ques_id':int(questionId),
+                                    'id_znonce_content':str(item['idZnonceContent']),
+                                   'data_url_token':str(item['dataUrlToken']),
+                                   'is_top_ques':int(isTopQuestion),
+                                   'tag_label_id_list': item['tagLabelIdList'],
+                                   'tag_label_data_topic_id_list': item['tagLabelDataTopicIdList'],
+                                   'ques_title': item['questionTitle'],
+                                   'data_resource_id': str(item['dataResourceId']),
+                                   'ques_answer_count': int(item['questionAnswerCount']),
+                                   'ques_follower_count': int(item['questionFollowerCount']),
+                                   'ques_latest_active_time': item['questionLatestActiveTime'],
+                                   'ques_show_times': int(item['questionShowTimes']),
+                                   'topic_related_follower_count': int(item['topicRelatedFollowerCount']),
+                                   'ques_content': item['questionDetail'],
+                                   'related_ques_link_list': item['relatedQuestionLinkList'],
+                                   'ques_comment_count': int(item['quesCommentCount']),
+                                   'visits_count': int(item['visitsCount']),
+                                   'updated_at': datetime.datetime.now()}
 
 
-                try:
-                    self.questionTable.put(str(questionId),quesDetailDict)
-
-                    # self.redis11.hsetnx(str(questionId),quesDetailDict)
-                    # self.redis2.lset(str(item['questionId']),0,str(recordTimestamp))
-
-                except Exception,e:
-                    logging.warning('Error with put questionId into redis: '+str(e)+' try again......')
                     try:
-                        self.questionTable.put(str(questionId),quesDetailDict)
+                        self.col_question_info.insert_one(ques_detail_dict)
+
                         # self.redis11.hsetnx(str(questionId),quesDetailDict)
                         # self.redis2.lset(str(item['questionId']),0,str(recordTimestamp))
-                        logging.warning('tried again and successfully put data into redis ......')
+
                     except Exception,e:
-                        logging.warning('Error with put questionId into redis: '+str(e)+'tried again and failed')
+                        logging.error('Error with put questionId into mongo: '+str(e)+' try again......')
+                        try:
+                            self.col_question_info.insert_one(ques_detail_dict)
+                            # self.redis11.hsetnx(str(questionId),quesDetailDict)
+                            # self.redis2.lset(str(item['questionId']),0,str(recordTimestamp))
+                            logging.error('tried again and successfully put data into mongo ......')
+                        except Exception,e:
+                            logging.error('Error with put questionId into mongo: '+str(e)+'tried again and failed')
+                            logging.error('The item is %s',str(item))
 
 
+
+            except Exception,e:
+                logging.error('Error in try 0 with exception: '+str(e))
+                logging.error('The item is %s',str(item))
             return item
-
         else:
             return item
 
