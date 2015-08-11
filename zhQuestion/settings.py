@@ -31,7 +31,7 @@ DEFAULT_REQUEST_HEADERS = {
 
 }
 
-USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/42.0.2311.135 Safari/537.36'
+# USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/42.0.2311.135 Safari/537.36'
 
 EXTENSIONS = {
     # 'scrapy.contrib.feedexport.FeedExporter': None,
@@ -49,6 +49,10 @@ ITEM_PIPELINES = {
 SPIDER_MIDDDLEWARES = {
     'scrapy.contrib.spidermiddleware.httperror.HttpErrorMiddleware':300,
 }
+DOWNLOADER_MIDDLEWARES = {
+        'scrapy.downloadermiddlewares.useragent.UserAgentMiddleware' : None,
+        'zhQuestion.rotate_useragent.RotateUserAgentMiddleware' :400
+    }
 
 DUPEFILTER_CLASS = 'zhQuestion.custom_filters.SeenURLFilter'
 
