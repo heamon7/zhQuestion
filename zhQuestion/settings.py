@@ -49,10 +49,17 @@ ITEM_PIPELINES = {
 SPIDER_MIDDDLEWARES = {
     'scrapy.contrib.spidermiddleware.httperror.HttpErrorMiddleware':300,
 }
+# DOWNLOADER_MIDDLEWARES = {
+#         'scrapy.downloadermiddlewares.useragent.UserAgentMiddleware' : None,
+#         'zhQuestion.rotate_useragent.RotateUserAgentMiddleware' :400
+#     }
+
 DOWNLOADER_MIDDLEWARES = {
-        'scrapy.downloadermiddlewares.useragent.UserAgentMiddleware' : None,
-        'zhQuestion.rotate_useragent.RotateUserAgentMiddleware' :400
-    }
+    'scrapy.downloadermiddlewares.retry.RetryMiddleware': 90,
+    # Fix path to this module
+    'zhQuestion.rotate_useragent.ProxyMiddleware': 100,
+    'scrapy.downloadermiddlewares.httpproxy.HttpProxyMiddleware': 110,
+}
 
 DUPEFILTER_CLASS = 'zhQuestion.custom_filters.SeenURLFilter'
 

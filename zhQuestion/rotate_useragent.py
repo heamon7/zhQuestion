@@ -6,6 +6,7 @@
 """
 import logging
 import random
+from zhQuestion import settings
 from scrapy.downloadermiddlewares.useragent import UserAgentMiddleware
 
 class RotateUserAgentMiddleware(UserAgentMiddleware):
@@ -17,7 +18,7 @@ class RotateUserAgentMiddleware(UserAgentMiddleware):
         ua = random.choice(self.user_agent_list)
         if ua:
             #显示当前使用的useragent
-            print "********Current UserAgent:%s************" %ua
+            # print "********Current UserAgent:%s************" %ua
 
             #记录
             logging.info('Current UserAgent: '+ua)
@@ -63,3 +64,9 @@ class RotateUserAgentMiddleware(UserAgentMiddleware):
         "Mozilla/5.0 (Windows NT 6.2; WOW64) AppleWebKit/535.24 "
         "(KHTML, like Gecko) Chrome/19.0.1055.1 Safari/535.24"
        ]
+
+
+class ProxyMiddleware(object):
+    def process_request(self, request, spider):
+        request.meta['proxy'] = settings.HTTP_PROXY_LIST[0]
+        logging.info('proxy is :',request.meta['proxy'])
