@@ -37,24 +37,24 @@ class QuesRootPipeline(object):
             try:
                 currentTimestamp = int(time.time())
                 recordTimestamp = self.redis1.lindex(str(item['questionId']),0)
-
+                # 这个地方其实已经做了去重的处理
                 if not recordTimestamp or (int(currentTimestamp)-int(recordTimestamp) > int(settings.ROOT_UPDATE_PERIOD)):        # the latest record time in hbase
                     recordTimestamp = currentTimestamp
                     p1 = self.redis1.pipeline()
-                    p1.lpush(int(item['questionId'].strip())
-                                 ,int(item['questionTimestamp'].strip())
-                                 ,item['subTopicId'].strip()
+                    p1.lpush(int(item['questionId'])
+                                 ,int(item['questionTimestamp'])
+                                 ,item['subTopicId']
                                  # ,str(questionIndex)
-                                 ,int(recordTimestamp.strip()))
+                                 ,int(recordTimestamp))
                     p1.ltrim(int(item['questionId']),0,2)
                     p1.execute()
                     # isTopQuestion = 1 if item['isTopQuestion'] == 'true' else 0
-                    ques_basic_dict={'ques_id':int(item['questionId'].strip()),
+                    ques_basic_dict={'ques_id':int(item['questionId']),
                                                            # 'basic:answerCount':str(item['answerCount']),
                                                            # 'basic:isTopQues':str(isTopQuestion),
                                                            # 'basic:subTopicName':item['subTopicName'].encode('utf-8'),
-                                                           'sub_topic_id':item['subTopicId'].strip(),
-                                                           'ques_timestamp':int(item['questionTimestamp'].strip()),
+                                                           'sub_topic_id':item['subTopicId'],
+                                                           'ques_timestamp':int(item['questionTimestamp']),
                                                            'updated_at': datetime.datetime.now()
                                                            # 'basic:quesName':item['questionName'].encode('utf-8'),
                                                            # 'basic:quesIndex':str(questionIndex)

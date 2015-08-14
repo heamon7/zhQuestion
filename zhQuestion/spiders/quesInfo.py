@@ -8,7 +8,7 @@ from scrapy.shell import inspect_response
 
 
 
-from datetime import datetime
+import datetime
 from zhQuestion import settings
 
 from zhQuestion.items import QuesInfoItem
@@ -18,6 +18,8 @@ import redis
 import requests
 import logging
 import happybase
+from pymongo import MongoClient
+
 
 class QuesinfoerSpider(scrapy.Spider):
     name = "quesInfo"
@@ -31,22 +33,39 @@ class QuesinfoerSpider(scrapy.Spider):
     quesIndex =0
 
 
-    def __init__(self,spider_type='Master',spider_number=0,partition=1,**kwargs):
+    def __init__(self,stats,spider_type='Master',spider_number=0,partition=1,**kwargs):
+        self.stats = stats
         self.redis1 = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, password=settings.REDIS_PASSWORD,db=1)
+        client = MongoClient(settings.MONGO_URL)
+        db = client['zhihu']
+        self.col_log = db['log']
 
+        crawler_log = {'project':settings.BOT_NAME,
+                       'spider':self.name,
+                       'spider_type':spider_type,
+                       'spider_number':spider_number,
+                       'partition':partition,
+                       'type':'start',
+                       'updated_at':datetime.datetime.now()}
+
+        self.col_log.insert_one(crawler_log)
         try:
             self.spider_type = str(spider_type)
             self.spider_number = int(spider_number)
             self.partition = int(partition)
-            self.email= settings.EMAIL_LIST[self.spider_number]
-            self.password=settings.PASSWORD_LIST[self.spider_number]
+            # self.email= settings.EMAIL_LIST[self.spider_number]
+            # self.password=settings.PASSWORD_LIST[self.spider_number]
 
         except:
             self.spider_type = 'Master'
             self.spider_number = 0
             self.partition = 1
-            self.email= settings.EMAIL_LIST[self.spider_number]
-            self.password=settings.PASSWORD_LIST[self.spider_number]
+            # self.email= settings.EMAIL_LIST[self.spider_number]
+            # self.password=settings.PASSWORD_LIST[self.spider_number]
+    @classmethod
+    def from_crawler(cls, crawler):
+        return cls(crawler.stats)
+
     def start_requests(self):
 
         self.questionIdList = self.redis1.keys()
@@ -67,7 +86,7 @@ class QuesinfoerSpider(scrapy.Spider):
                         ,'setting':'JOBDIR=/tmp/scrapy/'+self.name+str(index)
                     }
                     logging.warning('Begin to request'+str(index))
-                    response = requests.post('http://'+settings.SCRAPYD_HOST_LIST[index]+':'+settings.SCRAPYD_PORT_LIST[index]+'/schedule.json',data=payload)
+                    response = requests.post('http://'+settings.SCRAPYD_HOST_LIST[0]+':'+settings.SCRAPYD_PORT_LIST[0]+'/schedule.json',data=payload)
                     logging.warning('Response: '+str(index)+' '+str(response))
             else:
                 logging.warning('Master number is '+str(self.spider_number) + ' partition is '+str(self.partition))
@@ -227,12 +246,18 @@ class QuesinfoerSpider(scrapy.Spider):
         finishedCount= p15.execute()[1]
         pipelineLimit = 10000
         batchLimit = 1000
-
+        crawler_log = {'project':settings.BOT_NAME,
+                       'spider':self.name,
+                       'spider_type':self.spider_type,
+                       'spider_number':self.spider_number,
+                       'partition':self.partition,
+                       'type':'close',
+                       'stats':self.stats.get_stats(),
+                       'updated_at':datetime.datetime.now()}
+        self.col_log.insert_one(crawler_log)
         if int(self.partition)==int(finishedCount):
             #删除其他标记
             redis15.ltrim(str(self.name),0,0)
-
-
             #清空队列
             redis15.rpop(self.name)
             #清空缓存数据的redis11数据库

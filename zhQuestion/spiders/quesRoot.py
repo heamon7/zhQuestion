@@ -131,7 +131,7 @@ class QuesfrontSpider(scrapy.Spider):
         finishedCount= p15.execute()[1]
         pipelineLimit = 10000
         batchLimit = 1000
-
+        logging.warning('The finishedCount is : %s and the partition is %s',str(finishedCount),str(self.partition))
         if int(self.partition)==int(finishedCount):
             #删除其他标记
             redis15.ltrim(str(self.name),0,0)

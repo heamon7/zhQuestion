@@ -68,5 +68,6 @@ class RotateUserAgentMiddleware(UserAgentMiddleware):
 
 class ProxyMiddleware(object):
     def process_request(self, request, spider):
-        request.meta['proxy'] = settings.HTTP_PROXY_LIST[0]
-        logging.info('proxy is :',request.meta['proxy'])
+        proxy = random.choice(settings.HTTP_PROXY_LIST)
+        request.meta['proxy'] = proxy
+        # logging.info('proxy is :',request.meta['proxy'])
