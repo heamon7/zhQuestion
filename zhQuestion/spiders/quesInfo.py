@@ -63,8 +63,8 @@ class QuesinfoerSpider(scrapy.Spider):
             # self.email= settings.EMAIL_LIST[self.spider_number]
             # self.password=settings.PASSWORD_LIST[self.spider_number]
     @classmethod
-    def from_crawler(cls, crawler):
-        return cls(crawler.stats)
+    def from_crawler(cls, crawler,spider_type='Master',spider_number=0,partition=1,**kwargs):
+        return cls(crawler.stats,spider_type=spider_type,spider_number=spider_number,partition=partition)
 
     def start_requests(self):
 
@@ -135,18 +135,21 @@ class QuesinfoerSpider(scrapy.Spider):
             logging.warning('Successfully login with %s  ',str(loginUserLink))
 
         except:
-            logging.error('Login failed! %s',self.email)
+            logging.error('Login failed with spider_number %s',str(self.spider_number))
 
         #inspect_response(response,self)
         #self.urls = ['http://www.zhihu.com/question/28626263','http://www.zhihu.com/question/22921426','http://www.zhihu.com/question/20123112']
         for questionId in self.questionIdList:
-            yield self.make_requests_from_url(self.baseUrl +str(questionId)+'?nr=1')
+            yield FormRequest(url=self.baseUrl +str(questionId)+'?nr=1',
+                              meta={'proxy':settings.HTTP_PROXY_LIST[self.spider_number]})
 
 
     def parse(self,response):
         if response.status != 200:
 #            print "ParsePage HTTPStatusCode: %s Retrying !" %str(response.status)
-            yield  self.make_requests_from_url(response.url)
+#             yield  self.make_requests_from_url(response.url)
+            yield FormRequest(url=response.request.url,
+                              meta={'proxy':settings.HTTP_PROXY_LIST[self.spider_number]})
 
         else:
             item =  QuesInfoItem()
