@@ -14,6 +14,8 @@ from zhQuestion.items import QuesCommentItem
 from zhQuestion import settings
 
 import happybase
+from pymongo import MongoClient
+import datetime
 
 
 class QuescommentSpider(scrapy.Spider):
@@ -32,23 +34,30 @@ class QuescommentSpider(scrapy.Spider):
     pipelineLimit = 100000
     threhold = 100
 
-    def __init__(self,spider_type='Master',spider_number=0,partition=1,**kwargs):
+    def __init__(self,stats,spider_type='Master',spider_number=0,partition=1,**kwargs):
         self.redis2 = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, password=settings.REDIS_PASSWORD,db=2)
+        self.stats = stats
+        client = MongoClient(settings.MONGO_URL)
+        db = client['zhihu']
+        self.col_log = db['log']
+
 
         try:
             self.spider_type = str(spider_type)
             self.spider_number = int(spider_number)
             self.partition = int(partition)
-            self.email= settings.EMAIL_LIST[self.spider_number]
-            self.password=settings.PASSWORD_LIST[self.spider_number]
+            # self.email= settings.EMAIL_LIST[self.spider_number]
+            # self.password=settings.PASSWORD_LIST[self.spider_number]
 
         except:
             self.spider_type = 'Master'
             self.spider_number = 0
             self.partition = 1
-            self.email= settings.EMAIL_LIST[self.spider_number]
-            self.password=settings.PASSWORD_LIST[self.spider_number]
-
+            # self.email= settings.EMAIL_LIST[self.spider_number]
+            # self.password=settings.PASSWORD_LIST[self.spider_number]
+    @classmethod
+    def from_crawler(cls, crawler,spider_type='Master',spider_number=0,partition=1,**kwargs):
+        return cls(crawler.stats,spider_type=spider_type,spider_number=spider_number,partition=partition)
 
     def start_requests(self):
 
@@ -124,7 +133,16 @@ class QuescommentSpider(scrapy.Spider):
         logging.warning('totalCount to request is :'+str(len(self.questionIdList)))
         logging.warning('totalDataIdCount to request is :'+str(len(self.questionDataResourceIdList)))
 
+        crawler_log = {'project':settings.BOT_NAME,
+                       'spider':self.name,
+                       'spider_type':self.spider_type,
+                       'spider_number':self.spider_number,
+                       'partition':self.partition,
+                       'type':'start',
+                       'total_count':len(self.questionIdList),
+                       'updated_at':datetime.datetime.now()}
 
+        self.col_log.insert_one(crawler_log)
         for index ,questionDataResourceId in enumerate(self.questionDataResourceIdList):
                 reqUrl = self.baseUrl %str(questionDataResourceId)
                 yield Request(url =reqUrl
@@ -190,13 +208,23 @@ class QuescommentSpider(scrapy.Spider):
         finishedCount= p15.execute()[1]
         pipelineLimit = 100000
         batchLimit = 1000
+        crawler_log = {'project':settings.BOT_NAME,
+                       'spider':self.name,
+                       'spider_type':self.spider_type,
+                       'spider_number':self.spider_number,
+                       'partition':self.partition,
+                       'type':'close',
+                       'total_count':len(self.questionIdList),
+                       'stats':self.stats,
+                       'updated_at':datetime.datetime.now()}
+        self.col_log.insert_one(crawler_log)
 
         if int(self.partition)==int(finishedCount):
             #删除其他标记
             redis15.ltrim(str(self.name),0,0)
-            connection = happybase.Connection(settings.HBASE_HOST)
-
-            questionTable = connection.table('question')
+            # connection = happybase.Connection(settings.HBASE_HOST)
+            #
+            # questionTable = connection.table('question')
 
 
 
@@ -238,32 +266,32 @@ class QuescommentSpider(scrapy.Spider):
             #                                   'detail:userImgLink': str(quesCommentDict['detail:userImgLink']),
             #                                   })
 
-            questionIdList = redis11.keys()
-            p11 = redis11.pipeline()
-            tmpQuestionList = []
-            totalLength = len(questionIdList)
-            for index, questionId in enumerate(questionIdList):
-                p11.smembers(str(questionId))
-                tmpQuestionList.append(str(questionId))
-
-                if (index + 1) % pipelineLimit == 0:
-                    questionCommentDataIdSetList = p11.execute()
-                    with  questionTable.batch(batch_size=batchLimit):
-                        for innerIndex, questionCommentDataIdSet in enumerate(questionCommentDataIdSetList):
-
-                            questionTable.put(str(tmpQuestionList[innerIndex]),
-                                              {'comment:dataIdList': str(list(questionCommentDataIdSet))})
-                        tmpQuestionList=[]
-
-
-                elif  totalLength - index == 1:
-                    questionCommentDataIdSetList = p11.execute()
-                    with  questionTable.batch(batch_size=batchLimit):
-                        for innerIndex, questionCommentDataIdSet in enumerate(questionCommentDataIdSetList):
-
-                            questionTable.put(str(tmpQuestionList[innerIndex]),
-                                              {'comment:dataIdList': str(list(questionCommentDataIdSet))})
-                        tmpQuestionList=[]
+            # questionIdList = redis11.keys()
+            # p11 = redis11.pipeline()
+            # tmpQuestionList = []
+            # totalLength = len(questionIdList)
+            # for index, questionId in enumerate(questionIdList):
+            #     p11.smembers(str(questionId))
+            #     tmpQuestionList.append(str(questionId))
+            #
+            #     if (index + 1) % pipelineLimit == 0:
+            #         questionCommentDataIdSetList = p11.execute()
+            #         with  questionTable.batch(batch_size=batchLimit):
+            #             for innerIndex, questionCommentDataIdSet in enumerate(questionCommentDataIdSetList):
+            #
+            #                 questionTable.put(str(tmpQuestionList[innerIndex]),
+            #                                   {'comment:dataIdList': str(list(questionCommentDataIdSet))})
+            #             tmpQuestionList=[]
+            #
+            #
+            #     elif  totalLength - index == 1:
+            #         questionCommentDataIdSetList = p11.execute()
+            #         with  questionTable.batch(batch_size=batchLimit):
+            #             for innerIndex, questionCommentDataIdSet in enumerate(questionCommentDataIdSetList):
+            #
+            #                 questionTable.put(str(tmpQuestionList[innerIndex]),
+            #                                   {'comment:dataIdList': str(list(questionCommentDataIdSet))})
+            #             tmpQuestionList=[]
             #清空队列
             redis15.rpop(self.name)
             #清空缓存数据的redis11数据库

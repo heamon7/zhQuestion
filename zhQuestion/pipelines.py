@@ -189,39 +189,48 @@ class QuesCommentPipeline(object):
 
         self.redis3 = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, password=settings.REDIS_PASSWORD,db=3)
         self.redis11 = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, password=settings.REDIS_PASSWORD,db=11)
+        client = MongoClient(settings.MONGO_URL)
+        db = client['zhihu']
+        self.col_question_comment = db['questionComment']
+        self.col_user_link = db['userLink']
         # connection = happybase.Connection(settings.HBASE_HOST,timeout=10000)
         # self.commentTable = connection.table('comment')
 
     def process_item(self, item, spider):
         if item['spiderName'] == 'quesComment':
-            questionId = str(item['questionId'])
-            #如果有返回数据，即有评论
-            if questionId:
-                #存储一个问题的所有
-                self.redis11.sadd(str(questionId),str(item['commentDataId']))
-                if item['userLinkId']:
-                    self.redis3.sadd('userLinkIdSet',item['userLinkId'])
-                #无论之前有无记录，都会更新redis里的数据
-                commentDict={'detail:srcId':str(questionId),
-                                'detail:DataId':str(item['commentDataId']),
-                               'detail:content':str(item['commentContent'].encode('utf-8')),
-                                #日期可能含有中文
-                               'detail:date': str(item['commentDate'].encode('utf-8')),
-                               'detail:upCount': str(item['commentUpCount']),
-                               'detail:userName': item['userName'].encode('utf-8'),
-                               'detail:userLinkId': item['userLinkId'].encode('utf-8'),
-                               'detail:userImgLink': str(item['userImgLink']),
-                                'detail:type':'q'
-                               }
-                try:
-                    self.commentTable.put(str(item['commentDataId']),commentDict)
-                except Exception,e:
-                    logging.warning('Error with put questionId into redis: '+str(e)+' try again......')
+            try:
+                questionId = str(item['questionId'])
+                #如果有返回数据，即有评论
+                if questionId:
+                    #存储一个问题的所有
+                    # self.redis11.sadd(str(questionId),str(item['commentDataId']))
+                    if item['userLinkId']:
+                        self.col_user_link.update_one({'key_name':'user_link_set'},{'$addToSet':{'user_link_set':item['userLinkId']}},True)
+                    #无论之前有无记录，都会更新redis里的数据
+                    comment_dict={'ques_id':int(questionId),
+                                    'comment_data_id':int(item['commentDataId']),
+                                   'content':item['commentContent'],
+                                    #日期可能含有中文
+                                   'date': item['commentDate'],
+                                   'vote_count': int(item['commentUpCount']),
+                                   'user_name': item['userName'],
+                                   'user_link_id': item['userLinkId'],
+                                   'user_img_link': item['userImgLink'],
+                                    'comment_type':'q',
+                                    'updated_at':datetime.datetime.now()
+                                   }
                     try:
-                        self.commentTable.put(str(item['commentDataId']),commentDict)
-                        logging.warning('tried again and successfully put data into redis ......')
+                        self.col_question_comment.insert_one(comment_dict)
                     except Exception,e:
-                        logging.warning('Error with put questionId into redis: '+str(e)+'tried again and failed')
+                        logging.warning('Error with put questionId into mongo: '+str(e)+' try again......')
+                        try:
+                            self.col_question_comment.insert_one(comment_dict)
+                            logging.warning('tried again and successfully put data into mongo ......')
+                        except Exception,e:
+                            logging.warning('Error with put comment into mongo: '+str(e)+'tried again and failed')
+            except Exception,e:
+                logging.error('Error in try 0 with exception: '+str(e))
+                logging.error('The item is %s',str(item))
             return item
         else:
             return item
