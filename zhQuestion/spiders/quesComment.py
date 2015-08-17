@@ -146,7 +146,8 @@ class QuescommentSpider(scrapy.Spider):
         for index ,questionDataResourceId in enumerate(self.questionDataResourceIdList):
                 reqUrl = self.baseUrl %str(questionDataResourceId)
                 yield Request(url =reqUrl
-                                      ,meta={'questionId':self.questionIdList[index]}
+                                      ,meta={'questionId':self.questionIdList[index],
+                                             'proxy':settings.HTTP_PROXY_LIST[self.spider_number]}
 
                                       ,dont_filter=True
                                       ,callback=self.parsePage
@@ -160,7 +161,8 @@ class QuescommentSpider(scrapy.Spider):
 
     def parsePage(self,response):
         if response.status != 200:
-            yield Request(response.url,meta={'questionId':response.meta['questionId']},callback=self.parsePage)
+            yield Request(response.url,meta={'questionId':response.meta['questionId'],
+                                             'proxy':settings.HTTP_PROXY_LIST[self.spider_number]},callback=self.parsePage)
         else:
             item = QuesCommentItem()
             item['spiderName'] = self.name

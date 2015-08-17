@@ -240,16 +240,31 @@ class QuesFollowerPipeline(object):
 
         self.redis3 = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, password=settings.REDIS_PASSWORD,db=3)
         self.redis11 = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, password=settings.REDIS_PASSWORD,db=11)
+        client = MongoClient(settings.MONGO_URL)
+        db = client['zhihu']
+        self.col_question_follower = db['questionFollower']
+        self.col_user_link = db['userLink']
+
         # connection = happybase.Connection(settings.HBASE_HOST,timeout=10000)
         # self.userTable = connection.table('user')
 #这里简单处理，不考虑关注者的前后顺序，处理为一个集合,每个关注在数据库里存为一条记录，在缓存里存为一个hash表
     def process_item(self, item, spider):
         #这里只取用户的linkId作为下一步userInfo的源，userDataId只是存到questionFollower里
         if item['spiderName'] == 'quesFollower':
-            if item['userDataId'] :
-                #userLinkId可能有中文
-                self.redis11.sadd(str(item['questionId']),str(item['userDataId']))
-                self.redis3.sadd('userLinkIdSet',str(item['userLinkId'].encode('utf-8')))
+            try:
+                if item['userDataId'] :
+                    #userLinkId可能有中文
+                    question_follower_dict = {
+                        'ques_id': int(item['questionId']),
+                        'user_data_id': str(item['userDataId'])
+                    }
+                    self.col_question_follower.insert_one(question_follower_dict)
+                    self.col_user_link.update_one({'key_name':'user_link_set'},{'$addToSet':{'user_link_set':item['userLinkId']}},True)
+                    # self.redis11.sadd(str(item['questionId']),str(item['userDataId']))
+                    # self.redis3.sadd('userLinkIdSet',str(item['userLinkId'].encode('utf-8')))
+            except Exception,e:
+                logging.error('Error in try 0 with exception: '+str(e))
+                logging.error('The item is %s',str(item))
             DropItem()
         else:
             DropItem()

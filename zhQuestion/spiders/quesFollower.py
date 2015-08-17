@@ -7,7 +7,7 @@ from scrapy.http import Request,FormRequest
 from scrapy.selector import Selector
 from scrapy.shell import inspect_response
 
-from datetime import datetime
+import datetime
 from zhQuestion import settings
 
 from zhQuestion.items import QuesFollowerItem
@@ -19,6 +19,8 @@ import redis
 import happybase
 import requests
 import logging
+from pymongo import MongoClient
+
 
 class QuesfollowerSpider(scrapy.Spider):
     name = "quesFollower"
@@ -37,25 +39,30 @@ class QuesfollowerSpider(scrapy.Spider):
     threhold = 100
 
 
-    def __init__(self,spider_type='Master',spider_number=0,partition=1,**kwargs):
-
+    def __init__(self,stats,spider_type='Master',spider_number=0,partition=1,**kwargs):
+        self.stats = stats
         # self.redis0 = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, password=settings.REDIS_USER+':'+settings.REDIS_PASSWORD,db=0)
         self.redis2 = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, password=settings.REDIS_PASSWORD,db=2)
-
+        client = MongoClient(settings.MONGO_URL)
+        db = client['zhihu']
+        self.col_log = db['log']
 
         try:
             self.spider_type = str(spider_type)
             self.spider_number = int(spider_number)
             self.partition = int(partition)
-            self.email= settings.EMAIL_LIST[self.spider_number]
-            self.password=settings.PASSWORD_LIST[self.spider_number]
+            # self.email= settings.EMAIL_LIST[self.spider_number]
+            # self.password=settings.PASSWORD_LIST[self.spider_number]
 
         except:
             self.spider_type = 'Master'
             self.spider_number = 0
             self.partition = 1
-            self.email= settings.EMAIL_LIST[self.spider_number]
-            self.password=settings.PASSWORD_LIST[self.spider_number]
+            # self.email= settings.EMAIL_LIST[self.spider_number]
+            # self.password=settings.PASSWORD_LIST[self.spider_number]
+    @classmethod
+    def from_crawler(cls, crawler,spider_type='Master',spider_number=0,partition=1,**kwargs):
+        return cls(crawler.stats,spider_type=spider_type,spider_number=spider_number,partition=partition)
 
     def start_requests(self):
 
@@ -131,45 +138,22 @@ class QuesfollowerSpider(scrapy.Spider):
 
         logging.warning('start_requests ing ......')
         logging.warning('totalCount to request is :'+str(len(self.questionIdList)))
+
+        crawler_log = {'project':settings.BOT_NAME,
+                       'spider':self.name,
+                       'spider_type':self.spider_type,
+                       'spider_number':self.spider_number,
+                       'partition':self.partition,
+                       'type':'start',
+                       'total_count':len(self.questionIdList),
+                       'updated_at':datetime.datetime.now()}
+
+        self.col_log.insert_one(crawler_log)
         # yield Request("http://www.zhihu.com/",callback = self.post_login)
         yield Request(url ='http://www.zhihu.com',
                       cookies=settings.COOKIES_LIST[self.spider_number],
                       callback =self.after_login)
-    #
-    # def post_login(self,response):
-    #
-    #     logging.warning('post_login ing ......')
-    #
-    #     xsrfValue = response.xpath('/html/body/input[@name= "_xsrf"]/@value').extract()[0]
-    #     yield FormRequest.from_response(url='http://www.zhihu.com/login/email',
-    #                                       formdata={
-    #                                           '_xsrf':xsrfValue,
-    #                                           'email':self.email,
-    #                                           'password':self.password,
-    #                                           'remember_me': 'true'
-    #                                       },
-    #                                       dont_filter = True,
-    #                                       callback = self.after_login,
-    #                                       )
 
-    # def post_login(self,response):
-    #
-    #     # logging.warning('post_login ing ......')
-    #     #
-    #     # xsrfValue = response.xpath('/html/body/input[@name= "_xsrf"]/@value').extract()[0]
-    #     # yield FormRequest.from_response(url='http://www.zhihu.com/login/email',
-    #     #                                   formdata={
-    #     #                                       '_xsrf':xsrfValue,
-    #     #                                       'email':self.email,
-    #     #                                       'password':self.password,
-    #     #                                       'remember_me': 'true'
-    #     #                                   },
-    #     #                                   dont_filter = True,
-    #     #                                   callback = self.after_login,
-    #     #                                   )
-    #     yield Request(url ='http://www.zhihu.com',
-    #                   cookies=settings.COOKIES_LIST[self.spider_number],
-    #                   callback =self.after_login)
 
     def after_login(self,response):
         try:
@@ -188,7 +172,9 @@ class QuesfollowerSpider(scrapy.Spider):
                 for index in reversed(range(reqTimes)):
                     offset =str(self.reqLimit*index)
                     yield FormRequest(url =reqUrl
-                                      ,meta={'xsrfValue':xsrfValue,'offset':str(offset)}
+                                      ,meta={'xsrfValue':xsrfValue,
+                                             'offset':str(offset),
+                                             'proxy':settings.HTTP_PROXY_LIST[self.spider_number]}
                                       , formdata={
                                             '_xsrf': xsrfValue,
                                             'start': '0',
@@ -202,7 +188,9 @@ class QuesfollowerSpider(scrapy.Spider):
     def parsePage(self,response):
         if response.status != 200:
             yield FormRequest(url =response.request.url
-                                      ,meta={'xsrfValue':response.meta['xsrfValue'],'offset':response.meta['offset']}
+                                      ,meta={'xsrfValue':response.meta['xsrfValue'],
+                                             'offset':response.meta['offset'],
+                                             'proxy':settings.HTTP_PROXY_LIST[self.spider_number]}
                                       , formdata={
                                             '_xsrf': response.meta['xsrfValue'],
                                             'start': '0',
@@ -268,37 +256,48 @@ class QuesfollowerSpider(scrapy.Spider):
         pipelineLimit = 100000
         batchLimit = 1000
 
+        crawler_log = {'project':settings.BOT_NAME,
+                       'spider':self.name,
+                       'spider_type':self.spider_type,
+                       'spider_number':self.spider_number,
+                       'partition':self.partition,
+                       'type':'close',
+                       'total_count':len(self.questionIdList),
+                       'stats':self.stats,
+                       'updated_at':datetime.datetime.now()}
+        self.col_log.insert_one(crawler_log)
+
         if int(self.partition)==int(finishedCount):
             #删除其他标记
             redis15.ltrim(str(self.name),0,0)
-            connection = happybase.Connection(settings.HBASE_HOST)
-
-            questionTable = connection.table('question')
-
-            questionIdList = redis11.keys()
-            p11 = redis11.pipeline()
-            tmpQuestionList = []
-            totalLength = len(questionIdList)
-            for index, questionId in enumerate(questionIdList):
-                p11.smembers(str(questionId))
-                tmpQuestionList.append(str(questionId))
-
-                if (index + 1) % pipelineLimit == 0:
-                    questionFollowerDataIdSetList = p11.execute()
-                    with  questionTable.batch(batch_size=batchLimit):
-                        for innerIndex, questionFollowerDataIdSet in enumerate(questionFollowerDataIdSetList):
-                            questionTable.put(str(tmpQuestionList[innerIndex]),
-                                              {'follower:dataIdList': str(list(questionFollowerDataIdSet))})
-                        tmpQuestionList=[]
-
-
-                elif totalLength - index == 1:
-                    questionFollowerDataIdSetList = p11.execute()
-                    with  questionTable.batch(batch_size=batchLimit):
-                        for innerIndex, questionFollowerDataIdSet in enumerate(questionFollowerDataIdSetList):
-                            questionTable.put(str(tmpQuestionList[innerIndex]),
-                                              {'follower:dataIdList': str(list(questionFollowerDataIdSet))})
-                        tmpQuestionList=[]
+            # connection = happybase.Connection(settings.HBASE_HOST)
+            #
+            # questionTable = connection.table('question')
+            #
+            # questionIdList = redis11.keys()
+            # p11 = redis11.pipeline()
+            # tmpQuestionList = []
+            # totalLength = len(questionIdList)
+            # for index, questionId in enumerate(questionIdList):
+            #     p11.smembers(str(questionId))
+            #     tmpQuestionList.append(str(questionId))
+            #
+            #     if (index + 1) % pipelineLimit == 0:
+            #         questionFollowerDataIdSetList = p11.execute()
+            #         with  questionTable.batch(batch_size=batchLimit):
+            #             for innerIndex, questionFollowerDataIdSet in enumerate(questionFollowerDataIdSetList):
+            #                 questionTable.put(str(tmpQuestionList[innerIndex]),
+            #                                   {'follower:dataIdList': str(list(questionFollowerDataIdSet))})
+            #             tmpQuestionList=[]
+            #
+            #
+            #     elif totalLength - index == 1:
+            #         questionFollowerDataIdSetList = p11.execute()
+            #         with  questionTable.batch(batch_size=batchLimit):
+            #             for innerIndex, questionFollowerDataIdSet in enumerate(questionFollowerDataIdSetList):
+            #                 questionTable.put(str(tmpQuestionList[innerIndex]),
+            #                                   {'follower:dataIdList': str(list(questionFollowerDataIdSet))})
+            #             tmpQuestionList=[]
             #清空队列
             redis15.rpop(self.name)
             #清空缓存数据的redis11数据库
