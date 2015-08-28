@@ -192,7 +192,7 @@ class QuesCommentPipeline(object):
         client = MongoClient(settings.MONGO_URL)
         db = client['zhihu']
         self.col_question_comment = db['questionComment']
-        self.col_user_link = db['userLink']
+        self.col_user_link_id = db['userLinkId']
         # connection = happybase.Connection(settings.HBASE_HOST,timeout=10000)
         # self.commentTable = connection.table('comment')
 
@@ -204,8 +204,10 @@ class QuesCommentPipeline(object):
                 if questionId:
                     #存储一个问题的所有
                     # self.redis11.sadd(str(questionId),str(item['commentDataId']))
+                    # if item['userLinkId']:
+                    #     self.col_user_link.update_one({'key_name':'user_link_set'},{'$addToSet':{'user_link_set':item['userLinkId']}},True)
                     if item['userLinkId']:
-                        self.col_user_link.update_one({'key_name':'user_link_set'},{'$addToSet':{'user_link_set':item['userLinkId']}},True)
+                        self.col_user_link_id.insert_one({'user_link_id':item['userLinkId']})
                     #无论之前有无记录，都会更新redis里的数据
                     comment_dict={'ques_id':int(questionId),
                                     'comment_data_id':int(item['commentDataId']),
@@ -243,7 +245,7 @@ class QuesFollowerPipeline(object):
         client = MongoClient(settings.MONGO_URL)
         db = client['zhihu']
         self.col_question_follower = db['questionFollower']
-        self.col_user_link = db['userLink']
+        self.col_user_link_id = db['userLinkId']
 
         # connection = happybase.Connection(settings.HBASE_HOST,timeout=10000)
         # self.userTable = connection.table('user')
@@ -259,7 +261,7 @@ class QuesFollowerPipeline(object):
                         'user_data_id': str(item['userDataId'])
                     }
                     self.col_question_follower.insert_one(question_follower_dict)
-                    self.col_user_link.update_one({'key_name':'user_link_set'},{'$addToSet':{'user_link_set':item['userLinkId']}},True)
+                    self.col_user_link_id.insert_one({'user_link_id':item['userLinkId']})
                     # self.redis11.sadd(str(item['questionId']),str(item['userDataId']))
                     # self.redis3.sadd('userLinkIdSet',str(item['userLinkId'].encode('utf-8')))
             except Exception,e:
