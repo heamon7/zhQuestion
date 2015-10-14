@@ -140,16 +140,19 @@ class QuesinfoerSpider(scrapy.Spider):
         #inspect_response(response,self)
         #self.urls = ['http://www.zhihu.com/question/28626263','http://www.zhihu.com/question/22921426','http://www.zhihu.com/question/20123112']
         for questionId in self.questionIdList:
-            yield FormRequest(url=self.baseUrl +str(questionId)+'?nr=1',
-                              meta={'proxy':settings.HTTP_PROXY_LIST[self.spider_number]})
+            yield FormRequest(url=self.baseUrl +str(questionId)+'?nr=1')
+            # yield FormRequest(url=self.baseUrl +str(questionId)+'?nr=1',
+            #                   meta={'proxy':settings.HTTP_PROXY_LIST[self.spider_number]})
+
 
 
     def parse(self,response):
         if response.status != 200:
+            yield FormRequest(url=response.request.url)
 #            print "ParsePage HTTPStatusCode: %s Retrying !" %str(response.status)
 #             yield  self.make_requests_from_url(response.url)
-            yield FormRequest(url=response.request.url,
-                              meta={'proxy':settings.HTTP_PROXY_LIST[self.spider_number]})
+#             yield FormRequest(url=response.request.url,
+#                               meta={'proxy':settings.HTTP_PROXY_LIST[self.spider_number]})
 
         else:
             item =  QuesInfoItem()

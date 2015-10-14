@@ -173,8 +173,7 @@ class QuesfollowerSpider(scrapy.Spider):
                     offset =str(self.reqLimit*index)
                     yield FormRequest(url =reqUrl
                                       ,meta={'xsrfValue':xsrfValue,
-                                             'offset':str(offset),
-                                             'proxy':settings.HTTP_PROXY_LIST[self.spider_number]}
+                                             'offset':str(offset)}
                                       , formdata={
                                             '_xsrf': xsrfValue,
                                             'start': '0',
@@ -183,14 +182,25 @@ class QuesfollowerSpider(scrapy.Spider):
                                       ,dont_filter=True
                                       ,callback=self.parsePage
                                       )
+                    # yield FormRequest(url =reqUrl
+                    #                   ,meta={'xsrfValue':xsrfValue,
+                    #                          'offset':str(offset),
+                    #                          'proxy':settings.HTTP_PROXY_LIST[self.spider_number]}
+                    #                   , formdata={
+                    #                         '_xsrf': xsrfValue,
+                    #                         'start': '0',
+                    #                         'offset': str(offset),
+                    #                     }
+                    #                   ,dont_filter=True
+                    #                   ,callback=self.parsePage
+                    #                   )
 
 
     def parsePage(self,response):
         if response.status != 200:
             yield FormRequest(url =response.request.url
                                       ,meta={'xsrfValue':response.meta['xsrfValue'],
-                                             'offset':response.meta['offset'],
-                                             'proxy':settings.HTTP_PROXY_LIST[self.spider_number]}
+                                             'offset':response.meta['offset']}
                                       , formdata={
                                             '_xsrf': response.meta['xsrfValue'],
                                             'start': '0',
@@ -199,6 +209,18 @@ class QuesfollowerSpider(scrapy.Spider):
                                       ,dont_filter=True
                                       ,callback=self.parsePage
                                       )
+            # yield FormRequest(url =response.request.url
+            #                           ,meta={'xsrfValue':response.meta['xsrfValue'],
+            #                                  'offset':response.meta['offset'],
+            #                                  'proxy':settings.HTTP_PROXY_LIST[self.spider_number]}
+            #                           , formdata={
+            #                                 '_xsrf': response.meta['xsrfValue'],
+            #                                 'start': '0',
+            #                                 'offset':str(response.meta['offset']),
+            #                             }
+            #                           ,dont_filter=True
+            #                           ,callback=self.parsePage
+            #                           )
         else:
             item =  QuesFollowerItem()
             item['spiderName'] = self.name
