@@ -86,7 +86,7 @@ class QuesinfoerSpider(scrapy.Spider):
                         ,'setting':'JOBDIR=/tmp/scrapy/'+self.name+str(index)
                     }
                     logging.warning('Begin to request'+str(index))
-                    response = requests.post('http://'+settings.SCRAPYD_HOST_LIST[0]+':'+settings.SCRAPYD_PORT_LIST[0]+'/schedule.json',data=payload)
+                    response = requests.post('http://'+settings.SCRAPYD_HOST_LIST[index]+':'+settings.SCRAPYD_PORT_LIST[index]+'/schedule.json',data=payload)
                     logging.warning('Response: '+str(index)+' '+str(response))
             else:
                 logging.warning('Master number is '+str(self.spider_number) + ' partition is '+str(self.partition))

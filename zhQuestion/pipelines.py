@@ -36,7 +36,9 @@ class QuesRootPipeline(object):
         if item['spiderName'] == 'quesRoot':
             try:
                 currentTimestamp = int(time.time())
-                recordTimestamp = self.redis1.lindex(str(item['questionId']),0)
+                # recordTimestamp = self.redis1.lindex(str(item['questionId']),0)
+                recordTimestamp = None
+
                 # 这个地方其实已经做了去重的处理
                 if not recordTimestamp or (int(currentTimestamp)-int(recordTimestamp) > int(settings.ROOT_UPDATE_PERIOD)):        # the latest record time in hbase
                     recordTimestamp = currentTimestamp
